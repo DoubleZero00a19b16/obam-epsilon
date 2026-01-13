@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="az">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>OBA Epsilon - Final Fixed</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', "sans-serif"],
+            },
+            colors: {
+              brand: {
+                black: "#1A1A1A",
+                green: "#004D3B",
+                lime: "#D4F238",
+                gray: "#F8F9FB",
+                surface: "#FFFFFF",
+              },
+            },
+            boxShadow: {
+              soft: "0 4px 20px -2px rgba(0, 0, 0, 0.05)",
+              float: "0 10px 30px -5px rgba(0, 77, 59, 0.15)",
+              glow: "0 0 15px rgba(212, 242, 56, 0.4)",
+              card: "0 2px 10px rgba(0,0,0,0.03)",
+            },
+            animation: {
+              enter: "enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+              scale: "scale 0.2s ease-out",
+            },
+            keyframes: {
+              enter: {
+                "0%": {
+                  opacity: "0",
+                  transform: "translateY(10px) scale(0.98)",
+                },
+                "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+              },
+              scale: {
+                "0%": { transform: "scale(0.95)" },
+                "100%": { transform: "scale(1)" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- BACKEND INTEGRATION -->
+    <script>
+      const lang = localStorage.getItem("lang");
+      if (!lang) {
+        localStorage.setItem("lang", "az");
+      }
+
+      // API Configuration
+      const API_BASE_URL = "http://51.20.93.44:3000/api/v1";
+
+      // API Helper Functions
+      const api = {
+        getToken() {
+          return localStorage.getItem("oba_token");
+        },
+
+        async getTopProducts() {
+          return await this.request("/products/top");
+        },
+
+        setToken(token) {
+          localStorage.setItem("oba_token", token);
+        },
+
+        async updateRating(ratingId, score, comment) {
+          // The URL now uses the unique ratingId instead of the productId
+          return await this.request(`/ratings/${ratingId}`, {
+            method: "PUT",
+            body: JSON.stringify({ score, comment }),
+          });
+        },
+
+        clearToken() {
+          localStorage.removeItem("oba_token");
+          localStorage.removeItem("oba_user");
+        },
+
+        async request(endpoint, options = {}) {
+          const token = this.getToken();
+          const headers = {
+            "Content-Type": "application/json",
+            ...options.headers,
+          };
+
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+
+          try {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+              ...options,
+              headers,
+            });
+
+            const data = await response.json();
+
+            // if() {
+
+            // }
+
+            if (!response.ok) {
+              throw new Error(data.message || "Request failed");
+            }
+
+            return data;
+          } catch (error) {
+            console.error("API Error:", error);
+            throw error;
+          }
+        },
+
+        async login(phone, password) {
+          const response = await this.request("/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ phone, password }),
+          });
+
+          const token = response.token || response.access_token;
+          if (token) {
+            this.setToken(token);
+            localStorage.setItem("oba_user", JSON.stringify(response.user));
+          }
+
+          return response;
+        },
+
+        async register(userData) {
+          const response = await this.request("/auth/register", {
+            method: "POST",
+            body: JSON.stringify(userData),
+          });
+
+          const token = response.token || response.access_token;
+          if (token) {
+            this.setToken(token);
+            localStorage.setItem("oba_user", JSON.stringify(response.user));
+          }
+
+          return response;
+        },
+
+        async getUserProfile() {
+          return await this.request("/users/me");
+        },
+
+        async getProducts() {
+          return await this.request("/products");
+        },
+
+        async getUserOrders() {
+          return await this.request("/orders/my-orders");
+        },
+
+        async submitRating(productId, score, comment) {
+          return await this.request("/ratings", {
+            method: "POST",
+            body: JSON.stringify({ productId, score, comment }),
+          });
+        },
+      };
+      
+    </script>
+
+    <!-- LOGIC -->
+    <script>
+      document.addEventListener('alpine:init', () => {
+                  Alpine.data('obaApp', () => ({
+                      currentView: 'auth',
+                      authMode: 'login',
+                      activeTab: 'home',
+                      searchQuery: '',
+                      selectedCategory: 'All',
+                      loading: false,
+
+                      // Modals
+                      showAllReceipts: false,
+                      instructionsModalOpen: false,
+                      notificationsOpen: false,
+                      feedbackModalOpen: false,
+                      productDetailModalOpen: false,
+                      profileModalOpen: false,
+                      cardsModalOpen: false,
+
+                      // lang: 'az',
+                      lang: localStorage.getItem('lang'),
+
+                      catKeys: ['All', 'Dairy', 'Meat', 'Food', 'Sweets', 'Drinks', 'Hygiene'],
+
+                      user: {},
+                      products: [],
+                      topProducts: [],
+                      orders: [],
+
+                      loginForm: { phone: '+994701234567', password: 'password123' },
+                      registerForm: {
+                        name: '',
+                        surname: '',
+                        phone: '',
+                        dateOfBirth: '',
+                        password: ''
+                      },
+
+                      selectedReceipt: null,
+                      selectedRatingItem: null,
+                      authMode: 'login',
+                      selectedRatingValue: 0,
+                      selectedProductDetail: null,
+
+                      animateBalance: false,
+                      toast: { visible: false, message: '', type: 'success' },
+                      notificationsEnabled: true,
+
+                      feedbackReason: '',
+                      feedbackComment: '',
+
+                      t: {
+                          az: {
+                              months: {
+                                "Jan": "Yan",
+                                "Feb": "Fev",
+                                "Mar": "Mar",
+                                "Apr": "Apr",
+                                "May": "May",
+                                "Jun": "İyun",
+                                "Jul": "İyul",
+                                "Aug": "Avq",
+                                "Sep": "Sen",
+                                "Oct": "Okt",
+                                "Nov": "Noy",
+                                "Dec": "Dek"
+                              },
+                              welcome: "Xoş Gəldin",
+                              quantity: "Ədəd",
+                              solved_problem: "Problemi Həll Etdik",
+                              new: "Yeni",
+                              solved_problem_sentence: "qablaşdırması rəylərinizə əsasən dəyişdirildi.",
+                              product: "məhsul",
+                              edit: "Düzəlt",
+                              purchase: "Alış",
+                              cashback: "KEŞBEK",
+                              rate_earn: "Rəy Bildir",
+                              earn_sub: "Pul qazan",
+                              receipts: "Qəbzlər",
+                              all: "Hamısı",
+                              search: "Məhsul axtar...",
+                              top10_title: "Xalqın Seçimi",
+                              top10_sub: "Ən yüksək reytinqli məhsullar",
+                              settings_personal: "Şəxsi Məlumatlar",
+                              settings_cards: "Kartlar & Ödəniş",
+                              settings_notif: "Bildirişlər",
+                              settings_lang: "Dil Seçimi",
+                              logout: "Hesabdan Çıx",
+                              new_badge: "YENİ • 2x",
+                              rated: "Bitdi",
+                              pending: "Gözləyir",
+                              save: "Yadda Saxla",
+                              cancel: "Ləğv Et",
+                              submit: "Göndər",
+                              reason: "Problem nədir?",
+                              comment: "Əlavə qeydlər...",
+                              success_rate: "Balansa əlavə edildi!",
+                              feedback_success: "Rəyiniz qeydə alındı",
+                              categories: {
+                                'Dairy': 'Süd məhsulları',
+                                'Meat': 'Ət',
+                                'Food': 'Ərzaq',
+                                'Sweets': 'Şirniyyat',
+                                'Drinks': 'İçkilər',
+                                'Hygiene': 'Gigiyena'
+                              },
+                              loading: "Yüklənir...",
+                              welcome_title: "Xoş<br />Gəldiniz.",
+                              welcome_sub: "Qənaətin yeni ünvanı.",
+                              phone_placeholder: "Mobil Nömrə",
+                              password_placeholder: "Şifrə",
+                              login_btn: "Daxil Ol",
+                              no_account: "Hesab yaratmaq istəyirsiniz?",
+                              name_placeholder: "Ad",
+                              surname_placeholder: "Soyad",
+                              register_btn: "Qeydiyyatdan Keç",
+                              has_account: "Artıq hesabınız var?",
+                              how_it_works: "Necə<br>İşləyir?",
+                              rules_rank: "Qaydalar və Rank sistemi",
+                              receipts_loading: "Qəbzlər yüklənir...",
+                              no_receipts: "Qəbz tapılmadı",
+                              no_receipts_sub: "Alış-veriş etdikdə qəbzləriniz burada görünəcək",
+                              reg_success: "Qeydiyyat uğurla tamamlandı!",
+                              reg_fail: "Qeydiyyat uğursuz oldu",
+                              login_fail: "Giriş uğursuz oldu",
+                              data_error: "Məlumatlar yüklənərkən xəta baş verdi",
+                              rating_updating: "Reytinq yenilənir...",
+                              updated: "Yeniləndi",
+                              cant_edit: "Bu rəyi redaktə etmək mümkün deyil",
+                              val_name: "Ad və Soyad daxil edilməlidir",
+                              val_phone: "Mobil nömrə daxil edilməlidir",
+                              val_dob: "Doğum tarixi seçilməlidir",
+                              val_pass: "Şifrə ən azı 6 simvol olmalıdır",
+                              error_generic: "Xəta baş verdi",
+                              today: "Bu gün",
+                              yesterday: "Dünən",
+                              rank_gold: "Gold",
+                              rank_silver: "Silver",
+                              rank_bronze: "Bronze",
+                              member: "Üzvü",
+                              active_status: "Aktiv",
+                              notif_cashback_title: "Keşbek!",
+                              notif_cashback_msg: "+0.05₼ dünənki rəy üçün.",
+                              notif_new_prod_title: "Yeni Məhsul",
+                              notif_new_prod_msg: "Atena Xama artıq rəflərdə.",
+                              time_2h: "2 saat əvvəl",
+                              time_5h: "5 saat əvvəl",
+                              instr_title: "Qaydalar",
+                              instr_step1_title: "Alış-veriş et",
+                              instr_step1_desc: "OBA kartını oxut, qəbz avtomatik tətbiqə düşsün.",
+                              instr_step2_title: "Rəy Bildir & Qazan",
+                              instr_step2_desc: "Məhsullara ulduz ver. Hər rəy dərhal balansa <span class='font-bold text-brand-green'>0.01₼</span> əlavə edir.",
+                              instr_step3_title: "Yeni Məhsul Ovu",
+                              instr_step3_desc: "Üzərində <span class='bg-brand-black text-brand-lime px-1.5 py-0.5 rounded text-[9px] font-bold'>YENİ</span> yazılan məhsulları tap. Onlara rəy vermək <span class='font-bold text-gray-900'>2 qat (0.02₼)</span> qazandırır!",
+                              instr_btn: "Aydındır, Başladıq!"
+                            },
+                            en: {
+                                months: {
+                                  "Jan": "Jan",
+                                  "Feb": "Feb",
+                                  "Mar": "Mar",
+                                  "Apr": "Apr",
+                                  "May": "May",
+                                  "Jun": "Jun",
+                                  "Jul": "Jul",
+                                  "Aug": "Aug",
+                                  "Sep": "Sep",
+                                  "Oct": "Oct",
+                                  "Nov": "Nov",
+                                  "Dec": "Dec"
+                                },
+                              welcome: "Welcome",
+                              quantity: "Quantity",
+                              solved_problem: "Problem has been Solved",
+                              new: "New",
+                              solved_problem_sentence: "Has been improved thanks to your rating.",
+                              product: "product",
+                              edit: "Edit",
+                              purchase: "Purchase",
+                              cashback: "CASHBACK",
+                              rate_earn: "Rate & Earn",
+                              earn_sub: "Get Cash",
+                              receipts: "Receipts",
+                              all: "All",
+                              search: "Search products...",
+                              top10_title: "People's Choice",
+                              top10_sub: "Top rated products",
+                              settings_personal: "Personal Info",
+                              settings_cards: "Cards & Payment",
+                              settings_notif: "Notifications",
+                              settings_lang: "Language",
+                              logout: "Log Out",
+                              new_badge: "NEW • 2x",
+                              rated: "Rated",
+                              pending: "Pending",
+                              save: "Save",
+                              cancel: "Cancel",
+                              submit: "Submit",
+                              reason: "What went wrong?",
+                              comment: "Additional comments...",
+                              success_rate: "Added to balance!",
+                              feedback_success: "Feedback submitted",
+                              categories: {
+                                'Dairy': 'Dairy',
+                                  'Meat': 'Meat',
+                                  'Food': 'Food',
+                                  'Sweets': 'Sweets',
+                                  'Drinks': 'Drinks',
+                                  'Hygiene': 'Hygiene'
+                              },
+                                loading: "Loading...",
+                                welcome_title: "Welcome.",
+                                welcome_sub: "New address of savings.",
+                                phone_placeholder: "Mobile Number",
+                                password_placeholder: "Password",
+                                login_btn: "Login",
+                                no_account: "Don't have an account?",
+                                name_placeholder: "Name",
+                                surname_placeholder: "Surname",
+                                register_btn: "Register",
+                                has_account: "Already have an account?",
+                                how_it_works: "How it<br>Works?",
+                                rules_rank: "Rules and Rank system",
+                                receipts_loading: "Loading receipts...",
+                                no_receipts: "No receipts found",
+                                no_receipts_sub: "Your receipts will appear here after purchase",
+                                reg_success: "Registration successful!",
+                                reg_fail: "Registration failed",
+                                login_fail: "Login failed",
+                                data_error: "Error loading data",
+                                rating_updating: "Updating rating...",
+                                updated: "Updated",
+                                cant_edit: "Cannot edit this rating",
+                                val_name: "Name and Surname are required",
+                                val_phone: "Mobile number is required",
+                                val_dob: "Date of Birth is required",
+                                val_pass: "Password must be at least 6 characters",
+
+                                error_generic: "An error occurred",
+                                today: "Today",
+                                yesterday: "Yesterday",
+                                rank_gold: "Gold",
+                                rank_silver: "Silver",
+                                rank_bronze: "Bronze",
+                                member: "Member",
+                                active_status: "Active",
+                                notif_cashback_title: "Cashback!",
+                                notif_cashback_msg: "+0.05₼ for yesterday's review.",
+                                notif_new_prod_title: "New Product",
+                                notif_new_prod_msg: "Atena Sour Cream is now on shelves.",
+                                time_2h: "2h ago",
+                                time_5h: "5h ago",
+                                instr_title: "Rules",
+                                instr_step1_title: "Shop",
+                                instr_step1_desc: "Scan your OBA card, receipts appear automatically.",
+                                instr_step2_title: "Rate & Earn",
+                                instr_step2_desc: "Rate products. Each rating immediately adds <span class='font-bold text-brand-green'>0.01₼</span> to your balance.",
+                                instr_step3_title: "New Product Hunt",
+                                instr_step3_desc: "Find products marked <span class='bg-brand-black text-brand-lime px-1.5 py-0.5 rounded text-[9px] font-bold'>NEW</span>. Rating them earns <span class='font-bold text-gray-900'>2x (0.02₼)</span>!",
+                                instr_btn: "Got it, Let's Start!"
+                          },
+                          ru: {
+                              months: {
+                                "Jan": "Янв",
+                                "Feb": "Фев",
+                                "Mar": "Мар",
+                                "Apr": "Апр",
+                                "May": "Май",
+                                "Jun": "Июн",
+                                "Jul": "Июл",
+                                "Aug": "Авг",
+                                "Sep": "Сен",
+                                "Oct": "Окт",
+                                "Nov": "Ноя",
+                                "Dec": "Дек"
+                              },
+                              welcome: "Добро пожаловать",
+                              quantity: "Количество",
+                              solved_problem: "Проблема решена",
+                              new: "Новое",
+                              solved_problem_sentence: "Был улучшен благодаря вашему рейтингу.",
+                              product: "продукт",
+                              edit: "Редактировать",
+                              purchase: "Покупка",
+                              cashback: "КЕШБЭК",
+                              rate_earn: "Оценить",
+                              earn_sub: "Получить деньги",
+                              receipts: "Чеки",
+                              all: "Все",
+                              search: "Поиск продуктов...",
+                              top10_title: "Выбор Народа",
+                              top10_sub: "Лучшие продукты",
+                              settings_personal: "Личные Данные",
+                              settings_cards: "Карты и Оплата",
+                              settings_notif: "Уведомления",
+                              settings_lang: "Язык",
+                              logout: "Выйти",
+                              new_badge: "НОВОЕ • 2x",
+                              rated: "Оценено",
+                              pending: "Ждет оценки",
+                              save: "Сохранить",
+                              cancel: "Отмена",
+                              submit: "Отправить",
+                              reason: "Что случилось?",
+                              comment: "Комментарии...",
+                              success_rate: "Добавлено на баланс!",
+                              feedback_success: "Отзыв отправлен",
+                              categories: {
+                                  'Dairy': 'Молочные',
+                                  'Meat': 'Мясо',
+                                  'Food': 'Еда',
+                                  'Sweets': 'Сладости',
+                                  'Drinks': 'Напитки',
+                                  'Hygiene': 'Гигиена'
+                              },
+                              loading: "Загрузка...",
+                              welcome_title: "Добро<br />Пожаловать.",
+                              welcome_sub: "Новый адрес экономии.",
+                              phone_placeholder: "Мобильный номер",
+                              password_placeholder: "Пароль",
+                              login_btn: "Войти",
+                              no_account: "Нет аккаунта?",
+                              name_placeholder: "Имя",
+                              surname_placeholder: "Фамилия",
+                              register_btn: "Зарегистрироваться",
+                              has_account: "Уже есть аккаунт?",
+                              how_it_works: "Как это<br>работает?",
+                              rules_rank: "Правила и система рангов",
+                              receipts_loading: "Загрузка чеков...",
+                              no_receipts: "Чеки не найдены",
+                              no_receipts_sub: "Ваши чеки появятся здесь после покупки",
+                              reg_success: "Регистрация успешна!",
+                              reg_fail: "Регистрация не удалась",
+                              login_fail: "Вход не удался",
+                              data_error: "Ошибка загрузки данных",
+                              rating_updating: "Обновление рейтинга...",
+                              updated: "Обновлено",
+                              cant_edit: "Невозможно редактировать этот рейтинг",
+                              val_name: "Имя и Фамилия обязательны",
+                              val_phone: "Мобильный номер обязателен",
+                              val_dob: "Дата рождения обязательна",
+                              val_pass: "Пароль должен быть не менее 6 символов",
+                              error_generic: "Произошла ошибка",
+                              today: "Сегодня",
+                                yesterday: "Вчера",
+                                rank_gold: "Gold",
+                                rank_silver: "Silver",
+                                rank_bronze: "Bronze",
+                                member: "Участник",
+                                active_status: "Активен",
+                                notif_cashback_title: "Кешбэк!",
+                                notif_cashback_msg: "+0.05₼ за вчерашний отзыв.",
+                                notif_new_prod_title: "Новый Продукт",
+                                notif_new_prod_msg: "Сметана Atena уже на полках.",
+                                time_2h: "2ч назад",
+                                time_5h: "5ч назад",
+                                instr_title: "Правила",
+                                instr_step1_title: "Покупай",
+                                instr_step1_desc: "Сканируй карту OBA, чеки появятся автоматически.",
+                                instr_step2_title: "Оценивай и Зарабатывай",
+                                instr_step2_desc: "Оценивай продукты. Каждый отзыв сразу добавляет <span class='font-bold text-brand-green'>0.01₼</span> на баланс.",
+                                instr_step3_title: "Охота за Новинками",
+                                instr_step3_desc: "Найди продукты с пометкой <span class='bg-brand-black text-brand-lime px-1.5 py-0.5 rounded text-[9px] font-bold'>NEW</span>. Их оценка приносит <span class='font-bold text-gray-900'>2x (0.02₼)</span>!",
+                                instr_btn: "Понятно, Поехали!"
+                          }
+                      },
+
+                      get feedbackOptions() {
+                          return {
+                              az: ["Keyfiyyət / Dad", "Qiymət", "Qablaşdırma", "Xarab olub", "Digər"],
+                              en: ["Quality / Taste", "Price", "Packaging", "Expired", "Other"],
+                              ru: ["Качество / Вкус", "Цена", "Упаковка", "Испорчено", "Другое"]
+                          }[this.lang];
+                      },
+
+                      get notifications() {
+                          return [
+                              { id: 1, title: this.getText('notif_cashback_title'), msg: this.getText('notif_cashback_msg'), time: this.getText('time_2h'), type: 'reward' },
+                              { id: 2, title: this.getText('notif_new_prod_title'), msg: this.getText('notif_new_prod_msg'), time: this.getText('time_5h'), type: 'info' }
+                          ];
+                      },
+
+                      savedCards: [
+                          { id: 1, number: '**** **** **** 3826', type: 'visa', bank: 'Kapital Bank' },
+                          { id: 2, number: '**** **** **** 1092', type: 'master', bank: 'ABB' }
+                      ],
+
+                      async init() {
+                          const token = api.getToken();
+
+                          
+
+                          const savedUser = localStorage.getItem('oba_user');
+
+
+
+                          if (token && savedUser) {
+                              try {
+                                  this.user = JSON.parse(savedUser);
+                                  await this.loadUserData();
+                                  this.loadTopProducts(); // Load only if logged in
+                                  this.currentView = 'app';
+                              } catch (error) {
+                                  console.error('Init error:', error);
+                                  api.clearToken();
+                              }
+                            }
+                        },
+
+      // Inside Alpine.data('obaApp', ...)
+      topProducts: [],
+
+      async loadTopProducts() {
+          try {
+              this.loading = true;
+              if (!api.getToken()) return; // Prevent 401
+              // Make sure the endpoint matches your backend
+              const response = await api.request('/products/top');
+
+              // Handle different response formats (data wrapper vs direct array)
+              const rawData = Array.isArray(response) ? response : (response.data || []);
+
+              if (rawData.length === 0) {
+                  console.warn("No products found in API response");
+              }
+
+              this.topProducts = rawData
+                  .map(p => ({
+                      ...p,
+                      // Ensure numbers for sorting/display
+                      rating: parseFloat(p.averageRating || 0),
+                      reviews: p.ratingCount || 0,
+                      // Assign category for your UI styling
+                      catKey: this.guessCategory(p.name)
+                  }))
+                  .sort((a, b) => b.rating - a.rating)
+                  .slice(0, 10);
+
+              console.log("Top Products Loaded:", this.topProducts);
+          } catch (error) {
+              console.error('Failed to load top products:', error);
+          } finally {
+              this.loading = false;
+          }
+      },
+
+                        async loadUserData() {
+                          try {
+                              console.log("sa");
+                            
+                              this.loading = true;
+                              console.log('Loading user data...');
+
+                              // TOKEN
+                              try {
+                                const response = await api.getUserProfile();
+                              } catch (error) {
+                                this.logout()
+                                return;
+                              }
+
+                              // Load orders
+                              try {
+                                  const response = await api.getUserOrders();
+                                  console.log('Orders API response:', response);
+
+                                  const rawOrders = response.data || [];
+                                  console.log('Raw orders:', rawOrders);
+
+                                  this.orders = rawOrders.map(order => {
+                                      const rateableProducts = (order.products || []).filter(p => p.rewardInfo ? 1 : p.userRating ? 1 : 0);
+                                      const allRated = rateableProducts.length > 0 && rateableProducts.every(p => p.hasUserRated);
+                                      console.log(order.products);
+
+                                      return {
+                                          id: order.orderId?.substring(order.orderId.length - 4) || '0000',
+                                          fullId: order.orderId,
+                                          date: this.formatDate(order.orderDate),
+                                          day: this.formatDay(order.orderDate),
+                                          month: this.formatMonth(order.orderDate),
+                                          time: this.formatTime(order.orderDate),
+                                          total: parseFloat(order.totalAmount || 0).toFixed(2),
+                                          status: allRated ? 'rated' : 'pending',
+                                          items: (order.products || []).map(p => ({
+                                              id: p.id,
+                                              uniqueId: `${order.orderId}_${p.id}`,
+                                              name: p.name,
+                                              price: p.price,
+                                              quantity: p.quantity,
+                                              catKey: this.guessCategory(p.name),
+                                              type: p.isPrivateLabel ? 'pl' : 'global',
+                                              rateable: p.rewardInfo ? 1 : p.userRating ? 1 : 0,
+                                              rated: p.hasUserRated,
+                                              userRating: p.userRating?.score || 0,
+                                              userRatingId: p.userRating?.id || null,
+                                              points: p.isPrivateLabel ? 1 : 0,
+                                              rating: p.averageRating || 0,
+                                              reviews: p.ratingCount || 0
+                                          }))
+                                      };
+                                  });
+
+                                  console.log(this.orders);
+
+                                  console.log('Transformed orders:', this.orders);
+
+                                  // Extract products from orders
+                                  const productsMap = new Map();
+                                  rawOrders.forEach(order => {
+                                      (order.products || []).forEach(product => {
+                                          if (!productsMap.has(product.id)) {
+                                              productsMap.set(product.id, {
+                                                  id: product.id,
+                                                  name: product.name,
+                                                  description: product.description,
+                                                  price: product.price,
+                                                  type: product.isPrivateLabel ? 'pl' : 'global',
+                                                  rateable: product.isPrivateLabel,
+                                                  points: product.isPrivateLabel ? 1 : 0,
+                                                  catKey: this.guessCategory(product.name),
+                                                  rating: product.averageRating || 0,
+                                                  reviews: product.ratingCount || 0
+                                              });
+                                          }
+                                      });
+                                  });
+                                  this.products = Array.from(productsMap.values());
+                                  console.log('Extracted products:', this.products.length);
+                              } catch (error) {
+                                  console.error('Error loading orders:', error);
+                                  this.orders = [];
+                              }
+
+                              // Load user profile
+                              try {
+                                  const profileResponse = await api.getUserProfile();
+                                  console.log('Profile response:', profileResponse);
+
+                                  const profileData = profileResponse.data || profileResponse;
+                                  this.user = {
+                                      ...this.user,
+                                      name: profileData.name || 'Epsilon',
+                                      surname: profileData.surname || 'User',
+                                      phone: profileData.phone || '50 555 55 55',
+                                      balance: parseFloat(profileData.bonusBalance || 0),
+                                      monthlyEarned: parseFloat(profileData.bonusBalance || 0),
+                                      rank: this.getRank(profileData.bonusBalance || 0)
+                                  };
+                                  console.log('User updated:', this.user);
+                              } catch (error) {
+                                  console.error('Error loading profile:', error);
+                              }
+
+                          } catch (error) {
+                              console.error('Load data error:', error);
+                              this.showToast(this.getText('data_error'), 'error');
+                          } finally {
+                              this.loading = false;
+                          }
+                      },
+
+                      guessCategory(name) {
+                          const nameLower = (name || '').toLowerCase();
+                          if (nameLower.includes('süd') || nameLower.includes('yağ') || nameLower.includes('pendir') || nameLower.includes('xama') || nameLower.includes('milk') || nameLower.includes('butter')) return 'Dairy';
+                          if (nameLower.includes('sosis') || nameLower.includes('ət')) return 'Meat';
+                          if (nameLower.includes('çay') || nameLower.includes('cola') || nameLower.includes('pepsi') || nameLower.includes('juice') || nameLower.includes('şirə')) return 'Drinks';
+                          if (nameLower.includes('keks') || nameLower.includes('şokolad') || nameLower.includes('cookie') || nameLower.includes('chips') || nameLower.includes('cipsi') || nameLower.includes('flakes')) return 'Sweets';
+                          if (nameLower.includes('sabun') || nameLower.includes('kağız') || nameLower.includes('soap') || nameLower.includes('şampun') || nameLower.includes('toothpaste')) return 'Hygiene';
+                          if (nameLower.includes('pasta') || nameLower.includes('makaron')) return 'Food';
+                          return 'Food';
+                      },
+
+                      formatDate(dateString) {
+                          const date = new Date(dateString);
+                          const today = new Date();
+                          const yesterday = new Date(today);
+                          yesterday.setDate(yesterday.getDate() - 1);
+
+                          if (date.toDateString() === today.toDateString()) return this.getText('today');
+                          if (date.toDateString() === yesterday.toDateString()) return this.getText('yesterday');
+
+                          return date.toLocaleDateString('az-AZ', { day: '2-digit', month: 'short' });
+                      },
+
+                      formatDay(dateString) {
+                          const date = new Date(dateString);
+                          return date.getDate(); // Returns 16
+                      },
+
+                      formatMonth(dateString) {
+                          if (!dateString) return '';
+                          const date = new Date(dateString);
+                          const monthIndex = date.getMonth(); // returns 0 for January, 11 for December
+                          const months = [
+                            "Jan",
+                            "Feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec"
+                          ]
+                          // This pulls the correct name based on your current language
+                          return months[monthIndex];
+                      },
+
+                      formatTime(dateString) {
+                          return new Date(dateString).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+                      },
+
+                      getRank(balance) {
+                          if (balance >= 10) return 'Gold';
+                          if (balance >= 5) return 'Silver';
+                          return 'Bronze';
+                      },
+
+                      getText(key) {
+                          return this.t[this.lang][key];
+                      },
+
+                      getExactMonth(key) {
+                        return this.t[this.lang].months[key];
+                      },
+
+                      getCategoryLabel(key) {
+                          if (key === 'All') return this.getText('all');
+                          return this.t[this.lang].categories[key];
+                      },
+
+                      getCategoryName(catKey) {
+                          return this.t[this.lang].categories[catKey] || catKey;
+                      },
+
+                      get filteredProducts() {
+                          return this.products.filter(p => {
+                              const matchesCat = this.selectedCategory === 'All' || p.catKey === this.selectedCategory;
+                              const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+                              return matchesCat && matchesSearch;
+                          });
+                      },
+
+                      get top10Products() {
+                          return this.products
+                              .filter(p => p.rateable)
+                              .sort((a, b) => b.rating - a.rating)
+                              .slice(0, 10);
+                      },
+
+                      async login() {
+                          try {
+                              this.loading = true;
+                              const response = await api.login(this.loginForm.phone, this.loginForm.password);
+
+                              this.user = {
+                                  name: response.user.name || 'Epsilon',
+                                  surname: response.user.surname || 'User',
+                                  phone: response.user.phone,
+                                  balance: parseFloat(response.user.bonusBalance || 0),
+                                  monthlyEarned: parseFloat(response.user.bonusBalance || 0),
+                                  rank: this.getRank(response.user.bonusBalance || 0)
+                              };
+
+                              await this.loadUserData();
+                              this.currentView = 'app';
+                              this.showToast(this.getText('welcome'), 'success');
+
+                          } catch (error) {
+                              console.error('Login error:', error);
+                              this.showToast(error.message || this.getText('login_fail'), 'error');
+                          } finally {
+                              this.loading = false;
+                          }
+                      },
+
+                      async register() {
+                      try {
+                          this.loading = true;
+                          
+                          // Validation
+                          if (!this.registerForm.name || !this.registerForm.surname) {
+                              throw new Error(this.getText('val_name'));
+                          }
+                          if (!this.registerForm.phone) {
+                              throw new Error(this.getText('val_phone'));
+                          }
+                          if (!this.registerForm.dateOfBirth) {
+                              throw new Error(this.getText('val_dob'));
+                          }
+                          if (!this.registerForm.password || this.registerForm.password.length < 6) {
+                              throw new Error(this.getText('val_pass'));
+                          }
+                          
+                          const response = await api.register({
+                              name: this.registerForm.name,
+                              surname: this.registerForm.surname,
+                              phone: this.registerForm.phone,
+                              dateOfBirth: this.registerForm.dateOfBirth,
+                              password: this.registerForm.password
+                          });
+                          
+                          this.user = {
+                              name: response.user.name || this.registerForm.name,
+                              surname: response.user.surname || this.registerForm.surname,
+                              phone: response.user.phone,
+                              balance: parseFloat(response.user.bonusBalance || 0),
+                              monthlyEarned: 0,
+                              rank: 'Bronze'
+                          };
+                          
+                          await this.loadUserData();
+                          this.currentView = 'app';
+                          this.showToast(this.getText('reg_success'), 'success');
+                          
+                      } catch (error) {
+                          console.error('Register error:', error);
+                          this.showToast(error.message || this.getText('reg_fail'), 'error');
+                      } finally {
+                          this.loading = false;
+                      }
+                  },
+
+
+                      logout() {
+                          api.clearToken();
+                          this.user = null;
+                          this.products = [];
+                          this.orders = [];
+                          this.currentView = 'auth';
+                          this.authMode = 'login';
+                      },
+
+                      setLang(l) {
+                          this.lang = l;
+                          localStorage.setItem('lang', l);
+                          this.selectedCategory = 'All';
+                      },
+
+                      setCategory(key) {
+                          this.selectedCategory = key;
+                          if(key === 'All') this.searchQuery = '';
+                      },
+
+                      openReceipt(bill) {
+                          bill.items.sort((a, b) => Number(b.rateable) - Number(a.rateable));
+                          console.log(bill);
+                          this.selectedReceipt = bill;
+                      },
+
+                      openProductDetail(product) {
+                          this.selectedProductDetail = product;
+                          this.productDetailModalOpen = true;
+                      },
+
+                      getCategoryIcon(catKey) {
+                          const map = {
+                              'Dairy': 'fa-cheese', 'Drinks': 'fa-wine-bottle', 'Food': 'fa-wheat-awn',
+                              'Sweets': 'fa-cookie-bite', 'Hygiene': 'fa-pump-soap', 'Meat': 'fa-drumstick-bite'
+                          };
+                          return map[catKey] || 'fa-basket-shopping';
+                      },
+
+                      getCategoryStyle(catKey) {
+                          const map = {
+                              'Dairy': 'bg-blue-100 text-blue-700', 'Drinks': 'bg-purple-100 text-purple-700',
+                              'Food': 'bg-amber-100 text-amber-700', 'Sweets': 'bg-pink-100 text-pink-700',
+                              'Hygiene': 'bg-teal-100 text-teal-700', 'Meat': 'bg-red-100 text-red-700'
+                          };
+                          return map[catKey] || 'bg-gray-100 text-gray-700';
+                      },
+
+                      rateItem(item, stars) {
+                          this.selectedRatingItem = item;
+                          this.selectedRatingValue = stars;
+                          if (stars < 3) {
+                              this.feedbackReason = '';
+                              this.feedbackComment = '';
+                              this.feedbackModalOpen = true;
+                          } else {
+                              this.submitRatingToBackend(item, stars, '');
+                          }
+                      },
+
+                      enableEdit(item) {
+                        if (!item.userRatingId) {
+                            this.showToast(this.getText('cant_edit'), 'error');
+                            return;
+                        }
+                        item.isUpdating = true;
+                        item.rated = false;
+                        this.showToast(this.getText('rating_updating'), 'info');
+                    },
+
+                      submitFeedback() {
+                          // if (!this.feedbackReason) {
+                          if (!this.feedbackReason && !this.feedbackComment) {
+                              return this.showToast(this.getText('reason'), 'error');
+                          }
+                          this.feedbackModalOpen = false;
+                          // const comment = `${this.feedbackReason}: ${this.feedbackComment}`;
+                          const comment = `${this.feedbackComment}`;
+                          this.submitRatingToBackend(this.selectedRatingItem, this.selectedRatingValue, comment);
+                      },
+
+      //                 async submitRatingToBackend(item, stars, comment) {
+      //     try {
+      //         this.loading = true;
+      //         let response;
+
+      //         if (item.isUpdating && item.userRatingId) {
+      //             // Use the specific ratingId for the PUT request
+      //             response = await api.updateRating(item.userRatingId, stars, comment);
+      //         } else {
+      //             // Standard POST for new ratings
+      //             response = await api.submitRating(item.id, stars, comment);
+      //         }
+
+      //         const data = response.data || response;
+
+      //         // IMPORTANT: Save the rating ID returned by the server
+      //         // if this was a new rating (POST)
+      //         if (!item.userRatingId && (data.id || data.ratingId)) {
+      //             item.userRatingId = data.id || data.ratingId;
+      //         }
+
+      //         item.rated = true;
+      //         item.isUpdating = false;
+      //         item.userRating = stars;
+
+      //         // Reward logic (usually only for first-time ratings)
+      //         if (!item.isUpdating) {
+      //             const earnedAmount = data.rewardAmount || 0.01;
+      //             const currentBalance = Number(this.user.balance) || 0;
+      //             const addedAmount = Number(earnedAmount) || 0;
+      //             this.user.balance = Number((currentBalance + addedAmount).toFixed(2));
+      //             this.showToast(`+${earnedAmount.toFixed(2)}₼`, 'success');
+      //         } else {
+      //             this.showToast('Yeniləndi', 'success');
+      //         }
+
+      //     } catch (error) {
+      //         console.error('Rating Error:', error);
+      //         this.showToast(error.message || 'Xəta baş verdi', 'error');
+      //     } finally {
+      //         this.loading = false;
+      //     }
+      // },
+
+      async submitRatingToBackend(item, stars, comment) {
+          try {
+              this.loading = true;
+              let response;
+
+              // 1. Determine if this is an Update or a New Rating
+              if (item.userRatingId) {
+                  // It has an ID, so it MUST be an update
+                  response = await api.updateRating(item.userRatingId, stars, comment);
+
+                  response = await api.updateRating(item.userRatingId, stars, comment);
+
+                  this.showToast(this.getText('updated'), 'success');
+                  console.log("Update logic executed. No reward given.");
+              } else {
+                  // No ID, so it is a new rating
+                  response = await api.submitRating(item.id, stars, comment);
+
+                  // 2. ONLY run reward logic for NEW ratings
+                  const data = response.data || response;
+                  const earnedAmount = Number(data.rewardAmount) || 0.01;
+
+                  // Fix the toFixed error by ensuring Numbers
+                  const currentBal = Number(this.user.balance) || 0;
+                  this.user.balance = Number((currentBal + earnedAmount).toFixed(2));
+
+                  // Store the new ID so future clicks on "Edit" use PUT
+                  item.userRatingId = data.id || data.ratingId;
+
+                  this.animateBalance = true;
+                  setTimeout(() => this.animateBalance = false, 500);
+                  this.showToast(`+${earnedAmount.toFixed(2)}₼`, 'success');
+              }
+
+              // 3. Update common UI states
+              item.rated = true;
+              item.userRating = stars;
+              item.isUpdating = false; // Reset the local UI flag
+
+              // 4. Update Order Status Optimistically
+              // Find which order this product belongs to and check if all rateable items are now rated
+              this.orders.forEach(order => {
+                  const foundProduct = order.items.find(p => p.uniqueId === item.uniqueId || p.id === item.id);
+                  if (foundProduct) {
+                      // Update the product in the order (in case it's a reference copy issue)
+                      foundProduct.rated = true;
+                      
+                      // Check if all rateable products in this order are now rated
+                      const allRated = order.items.filter(p => p.rateable).every(p => p.rated);
+                      if (allRated) {
+                          order.status = 'rated';
+                      }
+                  }
+              });
+
+          } catch (error) {
+              console.error('Rating Error:', error);
+              this.showToast(error.message || this.getText('error_generic'), 'error');
+          } finally {
+              this.loading = false;
+          }
+      },
+
+      showToast(msg, type) {
+          this.toast.message = msg;
+          this.toast.type = type;
+          this.toast.visible = true;
+          setTimeout(() => { this.toast.visible = false }, 2000);
+      }
+              }))
+      })
+    </script>
+
+    <!-- Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+    <style>
+      body {
+        background-color: #f8f9fb;
+      }
+      .hide-scroll::-webkit-scrollbar {
+        display: none;
+      }
+      .squircle {
+        border-radius: 24px;
+      }
+
+      .new-product-glow {
+        box-shadow: 0 0 15px rgba(212, 242, 56, 0.4);
+        border: 1px solid #d4f238;
+      }
+    </style>
+  </head>
+  <body
+    class="font-sans text-brand-black antialiased selection:bg-brand-green selection:text-white"
+  >
+    <div
+      id="app"
+      x-data="obaApp()"
+      x-init="init()"
+      class="w-full min-h-screen relative max-w-md mx-auto bg-[#F8F9FB] shadow-2xl overflow-hidden"
+    >
+      <!-- LOADING OVERLAY -->
+      <div
+        x-show="loading"
+        class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center"
+      >
+        <div class="text-center">
+          <div
+            class="w-16 h-16 border-4 border-brand-green border-t-transparent rounded-full animate-spin mx-auto mb-4"
+          ></div>
+          <p class="text-sm font-bold text-gray-600" x-text="getText('loading')">Yüklənir...</p>
+        </div>
+      </div>
+
+      <!-- AUTH SCREEN -->
+      <div
+        x-show="currentView === 'auth'"
+        x-transition
+        class="absolute inset-0 z-50 bg-white flex flex-col justify-between p-8"
+      >
+        <div class="mt-20">
+          <div
+            class="w-16 h-16 bg-brand-green rounded-2xl flex items-center justify-center text-white text-2xl font-black mb-6 shadow-lg shadow-brand-green/30"
+          >
+            OBA
+          </div>
+          <h1 class="text-4xl font-extrabold tracking-tight text-gray-900 mb-2" x-html="getText('welcome_title')">
+            Xoş<br />Gəldiniz.
+          </h1>
+          <p class="text-gray-400 font-medium" x-text="getText('welcome_sub')">Qənaətin yeni ünvanı.</p>
+        </div>
+
+        <!-- LOGIN -->
+        <div x-show="authMode === 'login'" class="w-full space-y-4 mb-10">
+          <div class="space-y-3">
+            <input
+              type="tel"
+              x-model="loginForm.phone"
+              class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all"
+              :placeholder="getText('phone_placeholder')"
+            />
+            <input
+              type="password"
+              x-model="loginForm.password"
+              class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all"
+              :placeholder="getText('password_placeholder')"
+            />
+          </div>
+          <button
+            @click="login()"
+            :disabled="loading"
+            class="w-full bg-brand-green text-white font-bold py-4 rounded-2xl shadow-xl shadow-brand-green/20 active:scale-95 transition-transform flex justify-between items-center px-6"
+          >
+            <span x-text="getText('login_btn')">Daxil Ol</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+          <button @click="authMode = 'register'" class="w-full text-brand-green font-bold py-2 text-sm" x-text="getText('no_account')">
+              Hesab yaratmaq istəyirsiniz?
+          </button>
+        </div>
+
+        <!-- REGISTER -->
+        <div x-show="authMode === 'register'" class="w-full space-y-4 mb-10">
+                <div class="space-y-3">
+                    <input type="text" x-model="registerForm.name" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('name_placeholder')">
+                    <input type="text" x-model="registerForm.surname" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('surname_placeholder')">
+                    <input type="tel" x-model="registerForm.phone" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('phone_placeholder')">
+                    <input type="date" x-model="registerForm.dateOfBirth" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all">
+                    <input type="password" x-model="registerForm.password" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('password_placeholder')">
+                </div>
+                <button @click="register()" :disabled="loading" class="w-full bg-brand-green text-white font-bold py-4 rounded-2xl shadow-xl shadow-brand-green/20 active:scale-95 transition-transform flex justify-between items-center px-6">
+                    <span x-text="getText('register_btn')">Qeydiyyatdan Keç</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+                <button @click="authMode = 'login'" class="w-full text-brand-green font-bold py-2 text-sm" x-text="getText('has_account')">
+                    Artıq hesabınız var?
+                </button>
+            </div>
+      </div>
+
+      <!-- MAIN APP -->
+      <div
+        x-show="currentView === 'app' && user"
+        x-transition.opacity
+        class="min-h-screen flex flex-col"
+      >
+        <!-- Header -->
+        <header
+          class="sticky top-0 z-40 bg-[#F8F9FB]/95 backdrop-blur-md px-6 pt-12 pb-4 flex justify-between items-center border-b border-gray-200/50"
+        >
+          <div class="flex items-center space-x-3">
+            <div
+              class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-brand-green font-bold shadow-sm border border-gray-100"
+            >
+              <i class="fas fa-user"></i>
+            </div>
+            <div>
+              <p
+                class="text-xs text-gray-400 font-semibold uppercase tracking-wide"
+                x-text="getText('welcome')"
+              ></p>
+              <h2
+                class="text-lg font-bold text-gray-900"
+                x-text="user?.name || 'User'"
+              ></h2>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <!-- Notification Button -->
+            <button
+              @click="notificationsOpen = true"
+              class="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-100 shadow-sm relative active:scale-95 transition-transform cursor-pointer"
+            >
+              <i class="fas fa-bell text-gray-400"></i>
+              <div
+                class="absolute top-2.5 right-3 w-2 h-2 bg-brand-lime rounded-full border border-white"
+              ></div>
+            </button>
+          </div>
+        </header>
+
+        <main class="flex-1 px-6 pb-32 space-y-6 pt-4">
+          <!-- HOME TAB -->
+          <div x-show="activeTab === 'home'" class="space-y-6 animate-enter">
+            <!-- Main Wallet Card -->
+            <div
+              class="relative w-full aspect-[1.7] bg-brand-green rounded-[32px] p-6 text-white shadow-float overflow-hidden flex flex-col justify-between group"
+            >
+              <div
+                class="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"
+              ></div>
+              <div
+                class="absolute bottom-0 left-0 w-40 h-40 bg-brand-lime opacity-10 rounded-full blur-2xl -ml-10 -mb-10"
+              ></div>
+
+              <div class="relative z-10 flex justify-between items-start">
+                <div>
+                  <p
+                    class="text-white/60 text-xs font-medium tracking-wide mb-1"
+                    x-text="getText('cashback')"
+                  ></p>
+                  <h3
+                    class="text-4xl font-bold tracking-tight flex items-baseline gap-1"
+                    :class="{'animate-pulse text-brand-lime': animateBalance}"
+                  >
+                    <span x-text="(user?.balance || 0).toFixed(2)"></span>
+                    <span class="text-xl font-medium text-white/80">₼</span>
+                  </h3>
+                </div>
+                <div
+                  class="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/10"
+                >
+                  <span
+                    class="text-[10px] font-bold text-brand-lime uppercase tracking-wider"
+                    ><i class="fas fa-bolt mr-1"></i> <span x-text="getText('active_status')">Aktiv</span></span
+                  >
+                </div>
+              </div>
+
+              <div class="relative z-10 flex justify-between items-end">
+                <div class="flex items-center space-x-3">
+                  <i class="fas fa-qrcode text-2xl opacity-80"></i>
+                  <div
+                    class="text-xs font-mono text-white/70 tracking-widest"
+                    x-text="user?.phone?.slice(-4) || '****'"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Problem Solved Widget -->
+            <div
+              class="bg-white rounded-3xl p-5 shadow-soft border border-gray-50 flex items-start space-x-4"
+            >
+              <div
+                class="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 shrink-0"
+              >
+                <i class="fas fa-check-circle text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start">
+                  <h4
+                    class="font-bold text-gray-900 text-sm"
+                    x-text="getText('solved_problem')"
+                  >
+                    Problemi Həll Etdik
+                  </h4>
+                  <span
+                    class="text-[10px] bg-gray-100 text-gray-500 font-bold px-2 py-1 rounded-full"
+                    x-text="getText('new')"
+                  ></span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <span class="font-bold text-gray-800">OBA Kərə Yağı</span>
+                  <span x-text="getText('solved_problem_sentence')"
+                    >qablaşdırması rəylərinizə əsasən dəyişdirildi.</span
+                  >
+                </p>
+              </div>
+            </div>
+
+            <!-- Widgets Grid -->
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Left: How to Use (Onboarding Widget) -->
+              <div @click="instructionsModalOpen = true" class="bg-white p-5 rounded-3xl shadow-soft border border-gray-50 flex flex-col justify-between cursor-pointer active:scale-95 transition-transform relative overflow-hidden group">
+                  <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-50 rounded-full group-hover:scale-125 transition-transform duration-500"></div>
+                  
+                  <div class="flex justify-between items-start z-10">
+                      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                          <i class="fas fa-book-open"></i>
+                      </div>
+                      <div class="bg-blue-50 px-2 py-1 rounded-lg">
+                          <i class="fas fa-info-circle text-blue-400 text-xs"></i>
+                      </div>
+                  </div>
+                  
+                  <div class="mt-4 z-10">
+                      <h4 class="text-lg font-extrabold text-gray-900 leading-tight" x-html="getText('how_it_works')">Necə<br>İşləyir?</h4>
+                      <p class="text-[10px] text-gray-400 mt-1 font-bold" x-text="getText('rules_rank')">Qaydalar və Rank sistemi</p>
+                  </div>
+              </div>
+
+              <div
+                class="bg-brand-black p-5 rounded-3xl shadow-float text-white flex flex-col justify-between relative overflow-hidden cursor-pointer group"
+                @click="activeTab = 'products'"
+              >
+                <div
+                  class="absolute top-0 right-0 w-24 h-24 bg-brand-lime rounded-full blur-[40px] opacity-20 -mr-8 -mt-8 group-hover:opacity-30 transition-opacity"
+                ></div>
+                <div
+                  class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white mb-2"
+                >
+                  <i class="fas fa-star"></i>
+                </div>
+                <div>
+                  <h4
+                    class="font-bold text-lg leading-tight"
+                    x-text="getText('rate_earn')"
+                  ></h4>
+                  <p class="text-[10px] text-brand-lime mt-1 font-bold">
+                    <span x-text="getText('earn_sub')"></span>
+                    <i class="fas fa-arrow-right ml-1"></i>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Receipt List -->
+            <div>
+              <div class="flex justify-between items-center mb-4">
+                <h3
+                  class="text-lg font-bold text-gray-900"
+                  x-text="getText('receipts')"
+                ></h3>
+                <button
+                  @click="showAllReceipts = true"
+                  x-show="orders.length > 0"
+                  class="text-xs font-bold text-brand-green bg-green-50 px-3 py-1 rounded-full"
+                  x-text="getText('all')"
+                ></button>
+              </div>
+
+              <!-- Loading -->
+              <div
+                x-show="loading && orders.length === 0"
+                class="text-center py-8"
+              >
+                <div
+                  class="w-12 h-12 border-4 border-brand-green border-t-transparent rounded-full animate-spin mx-auto mb-3"
+                ></div>
+                <p class="text-sm text-gray-400" x-text="getText('receipts_loading')">Qəbzlər yüklənir...</p>
+              </div>
+
+              <!-- Empty -->
+              <div
+                x-show="!loading && orders.length === 0"
+                class="bg-white p-8 rounded-2xl shadow-card border border-gray-50 text-center"
+              >
+                <div
+                  class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                  <i class="fas fa-receipt text-2xl text-gray-300"></i>
+                </div>
+                <p class="font-bold text-gray-900 mb-1" x-text="getText('no_receipts')">Qəbz tapılmadı</p>
+                <p class="text-xs text-gray-400" x-text="getText('no_receipts_sub')">
+                  Alış-veriş etdikdə qəbzləriniz burada görünəcək
+                </p>
+              </div>
+
+              <!-- Orders -->
+              <div class="space-y-3" x-show="orders.length > 0">
+                <template x-for="bill in orders.slice(0, 3)" :key="bill.fullId">
+                  <div
+                    @click="openReceipt(bill)"
+                    class="bg-white p-4 rounded-2xl shadow-card border border-gray-50 flex justify-between items-center cursor-pointer active:scale-[0.98] transition-transform"
+                  >
+                    <div class="flex items-center space-x-4">
+                      <div
+                        class="w-12 h-12 rounded-2xl bg-gray-50 flex flex-col items-center justify-center text-gray-400 border border-gray-100"
+                      >
+                        <span
+                          class="text-[10px] font-bold uppercase"
+                          x-text="getExactMonth(bill.month)"
+                        ></span>
+                        <span
+                          class="text-sm font-bold text-gray-800"
+                          x-text="bill.day"
+                        ></span>
+                      </div>
+                      <div>
+                        <p
+                          class="font-bold text-gray-900 text-sm"
+                          x-text="getText('purchase') + ' #' + bill.id"
+                        ></p>
+                        <p
+                          class="text-xs text-gray-400 mt-0.5"
+                          x-text="bill.items.length +  ' ' + getText('product') + ' • ' + bill.time"
+                        ></p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p
+                        class="font-bold text-gray-900"
+                        x-text="bill.total + '₼'"
+                      ></p>
+                      <span
+                        class="text-[10px] font-bold"
+                        :class="bill.status === 'rated' ? 'text-green-600 bg-green-50 px-2 py-0.5 rounded-md' : 'text-orange-500 bg-orange-50 px-2 py-0.5 rounded-md'"
+                        x-text="getText(bill.status)"
+                      ></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- PRODUCTS TAB -->
+          <div
+            x-show="activeTab === 'products'"
+            class="space-y-6 animate-enter"
+          >
+            <div class="sticky top-28 z-30 bg-[#F8F9FB] pb-2">
+              <div class="relative flex items-center shadow-sm mb-4">
+                <input
+                  type="text"
+                  :placeholder="getText('search')"
+                  x-model="searchQuery"
+                  class="w-full bg-white border-0 rounded-2xl pl-12 pr-4 py-4 text-sm font-medium text-gray-800 placeholder-gray-400 shadow-soft outline-none focus:ring-2 focus:ring-brand-green/10"
+                />
+                <i
+                  class="fas fa-search absolute left-5 top-4.5 text-gray-300 text-lg"
+                ></i>
+              </div>
+
+              <!-- CATEGORY BUTTONS -->
+              <div
+                class="flex space-x-2 overflow-x-auto hide-scroll pb-2 pl-1 relative z-50"
+              >
+                <template x-for="key in catKeys" :key="key">
+                  <button
+                    @click="setCategory(key)"
+                    :class="selectedCategory === key ? 'bg-brand-black text-white shadow-lg' : 'bg-white text-gray-500 shadow-sm'"
+                    class="px-5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all active:scale-95"
+                  >
+                    <span x-text="getCategoryLabel(key)"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <template x-for="product in filteredProducts" :key="product.id">
+                <div
+                  class="bg-white p-4 rounded-3xl shadow-card border border-gray-50 flex items-center justify-between group"
+                >
+                  <div class="flex items-center space-x-4">
+                    <div
+                      class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl squircle"
+                      :class="getCategoryStyle(product.catKey)"
+                    >
+                      <i
+                        class="fas"
+                        :class="getCategoryIcon(product.catKey)"
+                      ></i>
+                    </div>
+                    <div>
+                      <h4
+                        class="font-bold text-gray-900 text-sm"
+                        x-text="product.name"
+                      ></h4>
+                      <div class="flex items-center space-x-2 mt-1">
+                        <span
+                          class="text-[10px] font-bold text-gray-400 uppercase tracking-wide"
+                          x-text="getCategoryName(product.catKey)"
+                        ></span>
+                        <template x-if="product.type === 'new'">
+                          <span
+                            class="text-[9px] bg-brand-lime text-black px-2 py-0.5 rounded font-bold"
+                            >YENİ</span
+                          >
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <p
+                      class="font-bold text-gray-900"
+                      x-text="product.price + '₼'"
+                    ></p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- TOP 10 TAB -->
+          <div
+            x-show="activeTab === 'top10'"
+            x-init="loadTopProducts()"
+            class="space-y-6 animate-enter"
+          >
+            <div class="space-y-3">
+              <template x-if="loading && topProducts.length === 0">
+                <div class="text-center py-10">
+                  <i
+                    class="fas fa-circle-notch fa-spin text-oba-green text-2xl"
+                  ></i>
+                </div>
+              </template>
+
+              <template
+                x-for="(product, index) in topProducts"
+                :key="product.id"
+              >
+                <div
+                  @click="openProductDetail(product)"
+                  class="bg-white p-4 rounded-3xl shadow-card border border-gray-50 flex items-center relative overflow-hidden cursor-pointer active:scale-95 transition-all"
+                >
+                  <div
+                    class="w-8 font-black text-lg italic text-gray-200"
+                    x-text="index + 1"
+                  ></div>
+
+                  <div
+                    class="w-12 h-12 rounded-xl flex items-center justify-center mr-4"
+                    :class="getCategoryStyle(product.catKey)"
+                  >
+                    <i class="fas" :class="getCategoryIcon(product.catKey)"></i>
+                  </div>
+
+                  <div class="flex-1">
+                    <h4
+                      class="font-bold text-gray-900 text-sm"
+                      x-text="product.name"
+                    ></h4>
+                    <div
+                      class="flex items-center space-x-1 mt-1 text-oba-gold text-xs"
+                    >
+                      <i class="fas fa-star text-yellow-400"></i>
+                      <span
+                        class="font-bold text-gray-700 ml-1"
+                        x-text="product.rating.toFixed(1)"
+                      ></span>
+                      <span
+                        class="text-gray-300 text-[10px] ml-1"
+                        x-text="'(' + product.reviews + ')'"
+                      ></span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- SETTINGS TAB -->
+          <div
+            x-show="activeTab === 'settings'"
+            class="space-y-6 animate-enter"
+          >
+            <div class="text-center py-6">
+              <div
+                class="w-24 h-24 bg-brand-green rounded-full mx-auto flex items-center justify-center text-4xl text-white font-bold mb-4 shadow-xl border-4 border-white"
+              >
+                <span x-text="user?.name?.charAt(0) || 'E'"></span>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900">
+                <span x-text="user?.name || 'Epsilon'"></span>
+                <span x-text="user?.surname || 'User'"></span>
+              </h2>
+              <div
+                class="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full mt-1"
+              >
+                <i class="fas fa-crown text-xs text-gray-500 mr-2"></i>
+                <span
+                  class="text-xs font-bold text-gray-600 uppercase"
+                  x-text="(user?.rank ? getText('rank_' + user.rank.toLowerCase()) : 'Bronze') + ' ' + getText('member')"
+                ></span>
+              </div>
+            </div>
+
+            <div
+              class="bg-white rounded-3xl shadow-soft border border-gray-50 overflow-hidden divide-y divide-gray-50"
+            >
+              <div
+                @click="profileModalOpen = true"
+                class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-user-pen"></i>
+                  </div>
+                  <span
+                    class="font-bold text-sm text-gray-700"
+                    x-text="getText('settings_personal')"
+                  ></span>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+              </div>
+              <div
+                @click="cardsModalOpen = true"
+                class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-wallet"></i>
+                  </div>
+                  <span
+                    class="font-bold text-sm text-gray-700"
+                    x-text="getText('settings_cards')"
+                  ></span>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+              </div>
+              <div
+                class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-bell"></i>
+                  </div>
+                  <span
+                    class="font-bold text-sm text-gray-700"
+                    x-text="getText('settings_notif')"
+                  ></span>
+                </div>
+                <div 
+                  class="w-10 h-6 rounded-full relative transition-colors duration-200"
+                  :class="notificationsEnabled ? 'bg-brand-green' : 'bg-gray-300'"
+                  @click.stop="notificationsEnabled = !notificationsEnabled"
+                >
+                  <div
+                    class="w-4 h-4 bg-white rounded-full absolute top-1 transition-all duration-200 shadow-sm"
+                    :class="notificationsEnabled ? 'right-1' : 'left-1'"
+                  ></div>
+                </div>
+              </div>
+              <div
+                class="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-globe"></i>
+                  </div>
+                  <span
+                    class="font-bold text-sm text-gray-700"
+                    x-text="getText('settings_lang')"
+                  ></span>
+                </div>
+                <div class="flex space-x-1">
+                  <button
+                    @click.stop="setLang('az')"
+                    class="text-[10px] font-bold px-2 py-1 rounded"
+                    :class="lang==='az' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-400'"
+                  >
+                    AZ
+                  </button>
+                  <button
+                    @click.stop="setLang('en')"
+                    class="text-[10px] font-bold px-2 py-1 rounded"
+                    :class="lang==='en' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-400'"
+                  >
+                    EN
+                  </button>
+                  <button
+                    @click.stop="setLang('ru')"
+                    class="text-[10px] font-bold px-2 py-1 rounded"
+                    :class="lang==='ru' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-400'"
+                  >
+                    RU
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              @click="logout()"
+              class="w-full bg-white border border-red-100 text-red-500 font-bold py-4 rounded-2xl hover:bg-red-50 transition-colors shadow-sm"
+              x-text="getText('logout')"
+            ></button>
+          </div>
+        </main>
+
+        <!-- NAVIGATION -->
+        <nav
+          class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-brand-black text-white rounded-full px-6 py-4 shadow-2xl shadow-brand-black/30 z-50 flex items-center space-x-8"
+        >
+          <button
+            @click="activeTab = 'home'"
+            :class="activeTab === 'home' ? 'text-brand-lime' : 'text-white/50'"
+            class="transition-colors"
+          >
+            <i class="fas fa-home text-xl"></i>
+          </button>
+          <button
+            @click="activeTab = 'products'"
+            :class="activeTab === 'products' ? 'text-brand-lime' : 'text-white/50'"
+            class="transition-colors"
+          >
+            <i class="fas fa-search text-xl"></i>
+          </button>
+          <div
+            class="w-14 h-14 bg-white rounded-full flex items-center justify-center -mt-10 border-[6px] border-[#F8F9FB] shadow-xl text-brand-black cursor-pointer active:scale-95 transition-transform"
+          >
+            <i class="fas fa-qrcode text-2xl"></i>
+          </div>
+          <button
+            @click="activeTab = 'top10'"
+            :class="activeTab === 'top10' ? 'text-brand-lime' : 'text-white/50'"
+            class="transition-colors"
+          >
+            <i class="fas fa-star text-xl"></i>
+          </button>
+          <button
+            @click="activeTab = 'settings'"
+            :class="activeTab === 'settings' ? 'text-brand-lime' : 'text-white/50'"
+            class="transition-colors"
+          >
+            <i class="fas fa-user text-xl"></i>
+          </button>
+        </nav>
+      </div>
+
+      <!-- ================= MODALS ================= -->
+
+      <!-- RECEIPT HISTORY MODAL -->
+      <div
+        x-show="showAllReceipts"
+        class="fixed inset-0 z-[60] flex flex-col bg-[#F8F9FB] animate-enter"
+      >
+        <div
+          class="px-6 pt-12 pb-4 flex items-center justify-between bg-white/80 backdrop-blur-md z-10 sticky top-0"
+        >
+          <h2
+            class="text-2xl font-bold text-gray-900"
+            x-text="getText('receipts')"
+          ></h2>
+          <button
+            @click="showAllReceipts = false"
+            class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-gray-500"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 pb-10 space-y-4 pt-4">
+          <template x-for="bill in orders" :key="bill.fullId">
+            <div
+              @click="openReceipt(bill)"
+              class="bg-white p-4 rounded-2xl shadow-card border border-gray-50 flex justify-between items-center cursor-pointer active:scale-[0.98] transition-transform"
+            >
+              <div class="flex items-center space-x-4">
+                <div
+                  class="w-12 h-12 rounded-2xl bg-gray-50 flex flex-col items-center justify-center text-gray-400 border border-gray-100"
+                >
+                  <span
+                    class="text-[10px] font-bold uppercase"
+                    x-text="getExactMonth(bill.month)"
+                  ></span>
+                  <span
+                    class="text-sm font-bold text-gray-800"
+                    x-text="bill.day"
+                  ></span>
+                </div>
+                <div>
+                  <p
+                    class="font-bold text-gray-900 text-sm"
+                    x-text="getText('purchase') + ' #' + bill.id"
+                  ></p>
+                  <p
+                    class="text-xs text-gray-400 mt-0.5"
+                    x-text="bill.items.length + ' ' + getText('product') + ' • ' + bill.time"
+                  ></p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p
+                  class="font-bold text-gray-900"
+                  x-text="bill.total + '₼'"
+                ></p>
+                <span
+                  class="text-[10px] font-bold"
+                  :class="bill.status === 'rated' ? 'text-green-600 bg-green-50 px-2 py-0.5 rounded-md' : 'text-orange-500 bg-orange-50 px-2 py-0.5 rounded-md'"
+                  x-text="getText(bill.status)"
+                ></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION MODAL -->
+      <div
+        x-show="notificationsOpen"
+        class="fixed inset-0 z-[60] flex justify-end"
+      >
+        <div
+          class="absolute inset-0 bg-brand-black/20 backdrop-blur-sm"
+          @click="notificationsOpen = false"
+        ></div>
+        <div
+          class="w-3/4 max-w-sm bg-white h-full relative z-10 p-6 flex flex-col shadow-2xl transition-transform duration-300"
+          x-transition:enter="translate-x-full"
+          x-transition:enter-end="translate-x-0"
+        >
+          <div class="flex justify-between items-center mb-8">
+            <h3
+              class="text-xl font-bold text-gray-900"
+              x-text="getText('settings_notif')"
+            ></h3>
+            <button @click="notificationsOpen = false">
+              <i class="fas fa-times text-gray-400"></i>
+            </button>
+          </div>
+          <div class="space-y-4">
+            <template x-for="notif in notifications">
+              <div class="bg-gray-50 p-4 rounded-2xl flex gap-4">
+                <div
+                  class="w-2 h-2 mt-2 rounded-full shrink-0"
+                  :class="notif.type === 'reward' ? 'bg-brand-lime' : 'bg-blue-500'"
+                ></div>
+                <div>
+                  <h4
+                    class="font-bold text-sm text-gray-900"
+                    x-text="notif.title"
+                  ></h4>
+                  <p class="text-xs text-gray-500 mt-1" x-text="notif.msg"></p>
+                  <p
+                    class="text-[10px] text-gray-300 mt-2"
+                    x-text="notif.time"
+                  ></p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCT DETAIL MODAL -->
+      <div
+        x-show="productDetailModalOpen"
+        class="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-brand-black/50 backdrop-blur-sm"
+          @click="productDetailModalOpen = false"
+        ></div>
+        <div
+          class="bg-white w-full max-w-sm rounded-[32px] p-6 relative z-10 animate-enter max-h-[85vh] overflow-y-auto"
+        >
+          <template x-if="selectedProductDetail">
+            <div>
+              <div class="flex items-start space-x-4 mb-6">
+                <div
+                  class="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl squircle"
+                  :class="getCategoryStyle(selectedProductDetail.catKey)"
+                >
+                  <i
+                    class="fas"
+                    :class="getCategoryIcon(selectedProductDetail.catKey)"
+                  ></i>
+                </div>
+                <div>
+                  <h2
+                    class="text-xl font-bold text-gray-900 leading-tight"
+                    x-text="selectedProductDetail.name"
+                  ></h2>
+                  <p
+                    class="text-gray-400 text-sm mt-1"
+                    x-text="selectedProductDetail.sku"
+                  ></p>
+                  <div class="flex items-center mt-2 text-yellow-500 font-bold">
+                    <span
+                      x-text="parseFloat(selectedProductDetail.averageRating).toFixed(1)"
+                    ></span>
+                    <i class="fas fa-star text-xs ml-1"></i>
+                    <span
+                      class="text-gray-300 text-xs font-normal ml-2"
+                      x-text="`(${selectedProductDetail.ratingCount} rəy)`"
+                    ></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-gray-50 p-4 rounded-2xl mb-6">
+                <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">
+                  Reytinq Statistikası
+                </h4>
+                <div
+                  class="flex items-end space-x-2 h-24 pb-2 border-b border-gray-200"
+                >
+                  <template x-for="star in [5,4,3,2,1]">
+                    <div
+                      class="flex-1 bg-brand-green rounded-t transition-all duration-500 relative group"
+                      :style="`height: ${selectedProductDetail.ratingCount > 0 ? (selectedProductDetail.ratingDistribution[star] / selectedProductDetail.ratingCount * 100) : 0}%`"
+                      :class="selectedProductDetail.ratingDistribution[star] > 0 ? 'opacity-90' : 'opacity-20 bg-gray-300'"
+                    >
+                      <div
+                        class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap"
+                        x-text="selectedProductDetail.ratingDistribution[star] + ' nəfər'"
+                      ></div>
+                    </div>
+                  </template>
+                </div>
+                <div
+                  class="flex justify-between text-xs text-gray-400 pt-2 font-mono font-bold px-1"
+                >
+                  <span>5★</span><span>4★</span><span>3★</span><span>2★</span
+                  ><span>1★</span>
+                </div>
+              </div>
+
+              <h3 class="font-bold text-gray-900 mb-3">Son Rəylər</h3>
+              <div class="space-y-3">
+                <template
+                  x-for="comment in selectedProductDetail.comments"
+                  :key="comment.id"
+                >
+                  <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div class="flex justify-between mb-1">
+                      <span
+                        class="font-bold text-xs text-gray-900"
+                        x-text="comment.name"
+                      ></span>
+                      <div class="text-[10px] text-yellow-500 flex">
+                        <template
+                          x-for="i in Array.from({length: comment.score})"
+                        >
+                          <i class="fas fa-star"></i>
+                        </template>
+                      </div>
+                    </div>
+                    <p
+                      class="text-xs text-gray-600 italic"
+                      x-text="comment.comment"
+                    ></p>
+                    <div class="mt-2 flex justify-between items-center">
+                      <span
+                        class="text-[9px] text-gray-400"
+                        x-text="new Date(comment.createdAt).toLocaleDateString()"
+                      ></span>
+                      <!-- <span x-if="comment.rewardAmount" class="text-[9px] text-green-600 font-bold" x-text,="`+${comment.rewardAmount}₼ qazandı`"></span> -->
+                    </div>
+                  </div>
+                </template>
+
+                <template x-if="selectedProductDetail.comments.length === 0">
+                  <p class="text-center text-gray-400 text-xs py-4">
+                    Hələ ki rəy bildirilməyib.
+                  </p>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- RECEIPT MODAL WITH EDIT & NEW PRODUCT DESIGN -->
+      <div
+        x-show="selectedReceipt"
+        class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4"
+        >
+        <!-- class="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center p-4" -->
+        <div
+          @click="selectedReceipt = null"
+          x-show="selectedReceipt"
+          x-transition.opacity
+          class="absolute inset-0 bg-brand-black/60 backdrop-blur-sm"
+        ></div>
+
+        <div
+          x-show="selectedReceipt"
+          x-transition:enter="transition ease-out duration-300"
+          x-transition:enter-start="translate-y-full opacity-0"
+          x-transition:enter-end="translate-y-0 opacity-100"
+          class="w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl relative z-10 max-h-[85vh] flex flex-col"
+        >
+          <div class="bg-gray-50 p-6 border-b border-dashed border-gray-200">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3
+                  class="text-2xl font-extrabold text-gray-900"
+                  x-text="selectedReceipt ? selectedReceipt.total + '₼' : ''"
+                ></h3>
+                <p
+                  class="text-sm text-gray-400 font-medium mt-1"
+                  x-text="selectedReceipt ? '#' + selectedReceipt.id : ''"
+                ></p>
+              </div>
+              <div
+                class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-400 cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors"
+                @click="selectedReceipt = null"
+              >
+                <i class="fas fa-times"></i>
+              </div>
+            </div>
+          </div>
+          <div class="flex-1 overflow-y-auto p-4 space-y-3">
+            <template x-if="selectedReceipt">
+              <template
+                x-for="(item, index) in selectedReceipt.items"
+                :key="item.uniqueId"
+              >
+                <!-- ITEM CARD -->
+                <div
+                  class="relative p-3 rounded-2xl border transition-all duration-300"
+                  :class="[
+                                    item.type === 'new' ? 'border-brand-lime bg-gradient-to-r from-white to-green-50 shadow-glow' : 'border-gray-100 bg-white shadow-sm',
+                                    !item.rateable ? 'opacity-60 bg-gray-50' : ''
+                                ]"
+                >
+                  <div class="flex items-center space-x-3 relative z-10">
+                    <div
+                      class="w-12 h-12 rounded-xl flex items-center justify-center text-sm shrink-0"
+                      :class="getCategoryStyle(item.catKey)"
+                    >
+                      <i class="fas" :class="getCategoryIcon(item.catKey)"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-0.5">
+                        <p
+                          class="font-bold text-gray-900 text-sm truncate"
+                          x-text="item.name"
+                        ></p>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <p
+                          class="text-xs text-gray-400 font-medium"
+                          x-text="item.price + '₼' + ' • ' + item.quantity + ' ' + getText('quantity')"
+                        ></p>
+                        <template x-if="item.type === 'new'">
+                          <div
+                            class="flex items-center px-1.5 py-0.5 rounded bg-brand-black/90 backdrop-blur"
+                          >
+                            <i
+                              class="fas fa-bolt text-[8px] text-brand-lime mr-1 animate-pulse"
+                            ></i>
+                            <span
+                              class="text-[9px] font-bold text-white tracking-wide"
+                              x-text="getText('new_badge')"
+                            ></span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Rating Section -->
+                  <template x-if="item.rateable">
+                    <div
+                      class="mt-3 flex items-center justify-between border-t border-gray-100 pt-2"
+                    >
+                      <div class="flex items-center">
+                        <template x-for="i in 5">
+                          <button
+                            @click="!item.rated || item.isEditing ? rateItem(item, i) : null"
+                            class="text-xl px-0.5 transition-all active:scale-90"
+                            :class="i <= item.userRating ? 'text-brand-lime drop-shadow-sm' : 'text-gray-200'"
+                          >
+                            <i class="fas fa-star"></i>
+                          </button>
+                        </template>
+                      </div>
+
+                      <!-- EDIT BUTTON -->
+                      <template x-if="item.rated">
+                        <button
+                          @click="enableEdit(item)"
+                          class="text-[10px] font-bold text-gray-400 hover:text-brand-green flex items-center px-2 py-1 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          <i class="fas fa-pencil-alt mr-1"></i> <span x-text="getText('edit')"></span>
+                        </button>
+                      </template>
+                      <template x-if="!item.rated">
+                        <span
+                          class="text-[10px] text-brand-green font-bold bg-green-50 px-2 py-1 rounded"
+                          >+0.01₼</span
+                        >
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROFILE EDIT MODAL -->
+      <div
+        x-show="profileModalOpen"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-6"
+      >
+        <div
+          class="absolute inset-0 bg-brand-black/60 backdrop-blur-sm"
+          @click="profileModalOpen = false"
+        ></div>
+        <div
+          class="bg-white w-full max-w-sm rounded-[32px] p-6 relative z-10 animate-enter"
+        >
+          <h3
+            class="text-xl font-bold mb-4"
+            x-text="getText('settings_personal')"
+          ></h3>
+          <div class="space-y-3">
+            <input
+              type="text"
+              x-model="user.name"
+              class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm font-bold"
+            />
+            <input
+              type="text"
+              x-model="user.surname"
+              class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm font-bold"
+            />
+            <input
+              type="text"
+              x-model="user.phone"
+              class="w-full bg-gray-50 border-0 rounded-xl p-3 text-sm font-bold"
+            />
+          </div>
+          <div class="flex space-x-3 mt-6">
+            <button
+              @click="profileModalOpen = false"
+              class="flex-1 bg-gray-100 text-gray-500 font-bold py-3 rounded-xl"
+              x-text="getText('cancel')"
+            ></button>
+            <button
+              @click="profileModalOpen = false; showToast('Məlumatlar yeniləndi', 'success')"
+              class="flex-1 bg-brand-green text-white font-bold py-3 rounded-xl"
+              x-text="getText('save')"
+            ></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS MODAL -->
+      <div
+        x-show="cardsModalOpen"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-6"
+      >
+        <div
+          class="absolute inset-0 bg-brand-black/60 backdrop-blur-sm"
+          @click="cardsModalOpen = false"
+        ></div>
+        <div
+          class="bg-white w-full max-w-sm rounded-[32px] p-6 relative z-10 animate-enter"
+        >
+          <h3
+            class="text-xl font-bold mb-4"
+            x-text="getText('settings_cards')"
+          ></h3>
+          <div class="space-y-3">
+            <template x-for="card in savedCards">
+              <div
+                class="p-4 border border-gray-100 rounded-2xl flex justify-between items-center bg-gray-50"
+              >
+                <div class="flex items-center space-x-3">
+                  <i
+                    class="fab fa-cc-visa text-2xl text-blue-900"
+                    x-show="card.type === 'visa'"
+                  ></i>
+                  <i
+                    class="fab fa-cc-mastercard text-2xl text-red-500"
+                    x-show="card.type === 'master'"
+                  ></i>
+                  <div>
+                    <p class="font-bold text-sm" x-text="card.bank"></p>
+                    <p class="text-xs text-gray-400" x-text="card.number"></p>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <div
+              class="p-4 border border-dashed border-gray-300 rounded-2xl flex justify-center items-center text-gray-400 cursor-pointer hover:bg-gray-50"
+            >
+              <i class="fas fa-plus mr-2"></i>
+              <span class="text-sm font-bold">Kart Əlavə Et</span>
+            </div>
+          </div>
+          <button
+            @click="cardsModalOpen = false"
+            class="mt-6 w-full bg-brand-black text-white font-bold py-3 rounded-xl"
+            x-text="getText('save')"
+          ></button>
+        </div>
+      </div>
+
+      <!-- FEEDBACK MODAL -->
+      <div
+        x-show="feedbackModalOpen"
+        class="fixed inset-0 z-[80] flex items-end justify-center"
+      >
+        <div
+          class="absolute inset-0 bg-brand-black/50 backdrop-blur-sm"
+          @click="feedbackModalOpen = false"
+        ></div>
+        <div
+          class="bg-white w-full max-w-md rounded-t-[32px] p-8 relative z-10 animate-enter shadow-2xl"
+        >
+          <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"></div>
+          <h3
+            class="text-xl font-extrabold text-gray-900 mb-2"
+            x-text="getText('reason')"
+          ></h3>
+          <div class="flex flex-wrap gap-2 mb-6">
+            <template x-for="option in feedbackOptions" :key="option">
+              <button
+                @click="feedbackReason = option"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all border-2"
+                :class="feedbackReason === option ? 'bg-brand-black text-white border-brand-black' : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'"
+              >
+                <span x-text="option"></span>
+              </button>
+            </template>
+          </div>
+          <textarea
+            x-model="feedbackComment"
+            class="w-full bg-gray-50 border-0 rounded-2xl p-4 text-sm font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 mb-6"
+            rows="3"
+            :placeholder="getText('comment')"
+          ></textarea>
+          <button
+            @click="submitFeedback()"
+            class="w-full bg-brand-green text-white font-bold py-4 rounded-2xl shadow-xl shadow-brand-green/20 active:scale-95 transition-transform"
+            x-text="getText('submit')"
+          ></button>
+        </div>
+      </div>
+
+      <!-- TOAST -->
+      <div
+        x-show="toast.visible"
+        x-transition
+        class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-brand-black/90 backdrop-blur-md text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 z-[100]"
+      >
+        <i class="fas fa-check-circle text-brand-lime"></i
+        ><span class="text-sm font-bold" x-text="toast.message"></span>
+      </div>
+      
+      <!-- INSTRUCTIONS MODAL -->
+      <div x-show="instructionsModalOpen" class="fixed inset-0 z-[90] flex items-center justify-center p-6">
+          <div class="absolute inset-0 bg-brand-black/60 backdrop-blur-sm" @click="instructionsModalOpen = false"></div>
+          <div class="bg-white w-full max-w-sm rounded-[32px] p-8 relative z-10 animate-enter overflow-hidden">
+              
+              <div class="flex justify-between items-center mb-6">
+                  <h2 class="text-2xl font-extrabold text-gray-900" x-text="getText('instr_title')"></h2>
+                  <button @click="instructionsModalOpen = false" class="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+              </div>
+  
+              <div class="space-y-6">
+                  <!-- Step 1 -->
+                  <div class="flex items-start space-x-4">
+                      <div class="w-10 h-10 rounded-xl bg-green-50 text-brand-green flex items-center justify-center shrink-0 font-bold text-lg">1</div>
+                      <div>
+                          <h4 class="font-bold text-gray-900 text-sm" x-text="getText('instr_step1_title')"></h4>
+                          <p class="text-xs text-gray-500 mt-1" x-text="getText('instr_step1_desc')"></p>
+                      </div>
+                  </div>
+  
+                  <!-- Step 2 -->
+                  <div class="flex items-start space-x-4">
+                      <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 font-bold text-lg">2</div>
+                      <div>
+                          <h4 class="font-bold text-gray-900 text-sm" x-text="getText('instr_step2_title')"></h4>
+                          <p class="text-xs text-gray-500 mt-1" x-html="getText('instr_step2_desc')"></p>
+                      </div>
+                  </div>
+  
+                  <!-- Step 3 (REPLACED RANK WITH "NEW PRODUCT BOOST") -->
+                  <div class="flex items-start space-x-4">
+                      <div class="w-10 h-10 rounded-xl bg-brand-lime/20 text-brand-green flex items-center justify-center shrink-0 font-bold text-lg">3</div>
+                      <div>
+                          <h4 class="font-bold text-gray-900 text-sm" x-text="getText('instr_step3_title')"></h4>
+                          <p class="text-xs text-gray-500 mt-1" x-html="getText('instr_step3_desc')"></p>
+                      </div>
+                  </div>
+              </div>
+  
+              <button @click="instructionsModalOpen = false" class="mt-8 w-full bg-brand-black text-white font-bold py-4 rounded-2xl shadow-xl" x-text="getText('instr_btn')"></button>
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

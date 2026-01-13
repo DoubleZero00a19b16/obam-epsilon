@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBA Order Creator - Admin Tool</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            green: '#004D3B',
+                            lime: '#D4F238',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">🛒 OBA Order Creator</h1>
+            <p class="text-gray-600">Admin tool to create orders for users</p>
+        </div>
+
+        <!-- API Config -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">⚙️ API Configuration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">API Base URL</label>
+                    <input type="text" id="apiUrl" value="http://localhost:3000/api/v1" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Auth Token (Optional)</label>
+                    <input type="password" id="authToken" placeholder="Bearer token if required" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- Bonus Card Selection -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">💳 Bonus Card</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Bonus Card Number</label>
+                    <input type="text" id="bonusCardNumber" placeholder="BC-2024-001234" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadUsers()" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        📋 Load All Cards
+                    </button>
+                </div>
+            </div>
+            
+            <!-- User/Card List -->
+            <div id="userList" class="mt-4 hidden">
+                <h3 class="font-semibold mb-2">Available Bonus Cards:</h3>
+                <div id="userListContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- Market Selection -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">🏪 Select Market</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Market ID</label>
+                    <input type="text" id="marketId" placeholder="550e8400-e29b-41d4-a716-446655440020" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadMarkets()" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        🏪 Load Markets
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Market List -->
+            <div id="marketList" class="mt-4 hidden">
+                <h3 class="font-semibold mb-2">Available Markets:</h3>
+                <div id="marketListContent" class="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- Product Selection Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold">📦 Products</h2>
+                <button onclick="loadProducts()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                    📦 Load Products
+                </button>
+            </div>
+        </div>
+
+        <!-- Product Selection -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">📦 Add Products to Order</h2>
+            
+            <!-- Available Products -->
+            <div id="productCatalog" class="mb-6 hidden">
+                <h3 class="font-semibold mb-3">📋 Available Products (Click to Add):</h3>
+                <div id="productCatalogContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto"></div>
+            </div>
+
+            <!-- Selected Products -->
+            <div>
+                <h3 class="font-semibold mb-3">🛒 Selected Products:</h3>
+                <div id="selectedProducts" class="space-y-2 min-h-[100px] p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                    <p class="text-gray-400 text-center">No products selected yet</p>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-between items-center">
+                <div class="text-lg font-bold text-gray-900">
+                    Total: <span id="orderTotal">0.00</span> ₼
+                </div>
+                <button onclick="clearProducts()" class="bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors">
+                    🗑️ Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Product Creation -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">➕ Create New Product</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Product Name -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                    <input type="text" id="productName" placeholder="House Brand Chocolate" maxlength="255"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+
+                <!-- SKU -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">SKU</label>
+                    <input type="text" id="productSku" placeholder="HB-CHOC-001"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+
+                <!-- Price -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Price (₼) *</label>
+                    <input type="number" id="productPrice" placeholder="3.50" step="0.01" min="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+
+                <!-- Checkboxes -->
+                <div class="space-y-2">
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="productAllowedRating" checked class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
+                        <span class="text-sm font-medium text-gray-700">Allowed Rating</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="productIsPrivateLabel" class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
+                        <span class="text-sm font-medium text-gray-700">Private Label (PL)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="productIsActive" checked class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
+                        <span class="text-sm font-medium text-gray-700">Active</span>
+                    </label>
+                </div>
+
+                <!-- Description (Full Width) -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea id="productDescription" rows="3" placeholder="Enter product description..."
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end space-x-3">
+                <button onclick="clearProductForm()" class="bg-gray-100 text-gray-600 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                    Clear
+                </button>
+                <button onclick="createProduct()" class="bg-brand-green text-white px-6 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    ➕ Create Product
+                </button>
+            </div>
+        </div>
+
+        <!-- Create Order Button -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <button onclick="createOrder()" id="createOrderBtn" 
+                    class="w-full bg-brand-green text-white px-6 py-4 rounded-lg text-lg font-bold hover:bg-green-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                ✅ Create Order
+            </button>
+        </div>
+
+        <!-- Response Display -->
+        <div id="responseSection" class="mt-6 hidden">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-xl font-bold mb-4">📤 Response</h2>
+                <pre id="responseContent" class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const state = {
+            products: [],
+            selectedProducts: [],
+            users: [],
+            markets: []
+        };
+
+        // API helpers
+        async function apiRequest(endpoint, options = {}) {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('authToken').value;
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Request failed');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('API Error:', error);
+                showResponse({ error: error.message }, 'error');
+                throw error;
+            }
+        }
+
+        // Load users with bonus cards
+        async function loadUsers() {
+            try {
+                const response = await apiRequest('/users');
+                state.users = response.data || response || [];
+                
+                const userListContent = document.getElementById('userListContent');
+                userListContent.innerHTML = state.users.map(user => {
+                    const cardNumber = user.bonusCard?.cardNumber || 'No card';
+                    const isActive = user.bonusCard?.isActive;
+                    
+                    return `
+                        <button onclick="selectBonusCard('${cardNumber}')" 
+                                class="text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors ${!isActive ? 'opacity-50' : ''}">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="font-bold text-sm mb-1">${cardNumber}</div>
+                                    <div class="text-xs text-gray-700">${user.name} ${user.surname}</div>
+                                    <div class="text-xs text-gray-500">${user.phone}</div>
+                                    <div class="text-xs text-green-600 font-semibold mt-1">Balance: ${parseFloat(user.bonusBalance || 0).toFixed(2)}₼</div>
+                                </div>
+                                ${isActive 
+                                    ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Active</span>' 
+                                    : '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Inactive</span>'
+                                }
+                            </div>
+                        </button>
+                    `;
+                }).join('');
+                
+                document.getElementById('userList').classList.remove('hidden');
+                showResponse({ message: `Loaded ${state.users.length} bonus cards`, users: state.users }, 'success');
+            } catch (error) {
+                console.error('Failed to load users:', error);
+            }
+        }
+
+        function selectBonusCard(cardNumber) {
+            document.getElementById('bonusCardNumber').value = cardNumber;
+            document.getElementById('bonusCardNumber').classList.add('ring-2', 'ring-green-500');
+            setTimeout(() => {
+                document.getElementById('bonusCardNumber').classList.remove('ring-2', 'ring-green-500');
+            }, 1000);
+        }
+
+        // Load markets
+        async function loadMarkets() {
+            try {
+                const response = await apiRequest('/markets');
+                state.markets = response.data || response || [];
+                
+                const marketListContent = document.getElementById('marketListContent');
+                marketListContent.innerHTML = state.markets.map(market => `
+                    <button onclick="selectMarket('${market.id}')" 
+                            class="text-left p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors">
+                        <div class="font-semibold">${market.name}</div>
+                        <div class="text-xs text-gray-500">${market.address}</div>
+                        <div class="text-xs text-gray-400 font-mono mt-1">${market.id}</div>
+                    </button>
+                `).join('');
+                
+                document.getElementById('marketList').classList.remove('hidden');
+                showResponse({ message: `Loaded ${state.markets.length} markets`, markets: state.markets }, 'success');
+            } catch (error) {
+                console.error('Failed to load markets:', error);
+            }
+        }
+
+        function selectMarket(marketId) {
+            document.getElementById('marketId').value = marketId;
+            document.getElementById('marketId').classList.add('ring-2', 'ring-green-500');
+            setTimeout(() => {
+                document.getElementById('marketId').classList.remove('ring-2', 'ring-green-500');
+            }, 1000);
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                const response = await apiRequest('/products');
+                state.products = response.data || response || [];
+                
+                const productCatalogContent = document.getElementById('productCatalogContent');
+                productCatalogContent.innerHTML = state.products.map(product => `
+                    <button onclick="addProduct('${product.id}')" 
+                            class="text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-semibold text-sm">${product.name} ${product.allowedRating ? "<span class=\"text-green-500 italic\">Rateable</span>" : "<span class=\"text-red-500 italic font-bold\">Unrateable</span>"}</div>
+                                <div class="text-xs text-gray-500 mt-1">${product.description || 'No description'}</div>
+                            </div>
+                            <div class="text-right ml-2">
+                                <div class="font-bold text-lg">${product.price}₼</div>
+                                ${product.isPrivateLabel ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">PL</span>' : ''}
+                            </div>
+                        </div>
+                    </button>
+                `).join('');
+                
+                document.getElementById('productCatalog').classList.remove('hidden');
+                showResponse({ message: `Loaded ${state.products.length} products`, products: state.products }, 'success');
+            } catch (error) {
+                console.error('Failed to load products:', error);
+            }
+        }
+
+        // Add product to order
+        function addProduct(productId) {
+            const product = state.products.find(p => p.id === productId);
+            if (!product) return;
+
+            // Check if already in cart
+            const existingItem = state.selectedProducts.find(item => item.productId === productId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                state.selectedProducts.push({
+                    productId: product.id,
+                    productName: product.name,
+                    unitPrice: product.price,
+                    quantity: 1
+                });
+            }
+
+            renderSelectedProducts();
+        }
+
+        // Remove product from order
+        function removeProduct(productId) {
+            state.selectedProducts = state.selectedProducts.filter(item => item.productId !== productId);
+            renderSelectedProducts();
+        }
+
+        // Update product quantity
+        function updateQuantity(productId, delta) {
+            const item = state.selectedProducts.find(item => item.productId === productId);
+            if (!item) return;
+
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                removeProduct(productId);
+            } else {
+                renderSelectedProducts();
+            }
+        }
+
+        // Clear all products
+        function clearProducts() {
+            if (state.selectedProducts.length === 0) return;
+            if (!confirm('Clear all products from order?')) return;
+            
+            state.selectedProducts = [];
+            renderSelectedProducts();
+        }
+
+        // Create new product
+        async function createProduct() {
+            const name = document.getElementById('productName').value.trim();
+            const description = document.getElementById('productDescription').value.trim();
+            const sku = document.getElementById('productSku').value.trim();
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const allowedRating = document.getElementById('productAllowedRating').checked;
+            const isPrivateLabel = document.getElementById('productIsPrivateLabel').checked;
+            const isActive = document.getElementById('productIsActive').checked;
+
+            // Validation
+            if (!name) {
+                alert('❌ Product name is required');
+                return;
+            }
+
+            if (!price || price <= 0) {
+                alert('❌ Valid price is required');
+                return;
+            }
+
+            // Prepare product data
+            const productData = {
+                name,
+                description: description || undefined,
+                sku: sku || undefined,
+                price,
+                allowedRating,
+                isPrivateLabel: isPrivateLabel || false,
+                isActive: isActive !== false
+            };
+
+            console.log('Creating product:', productData);
+
+            try {
+              console.log(JSON.stringify(productData));
+              
+                const response = await apiRequest('/products', {
+                    method: 'POST',
+                    body: JSON.stringify(productData)
+                });
+
+                showResponse(response, 'success');
+
+                const newProduct = response.data || response;
+                
+                // Show success message
+                alert(`✅ Product created successfully!\n\nProduct: ${newProduct.name || name}\nID: ${newProduct.id || 'N/A'}\nPrice: ${price}₼\nAllowed Rating: ${allowedRating ? 'Yes' : 'No'}\nPrivate Label: ${isPrivateLabel ? 'Yes' : 'No'}`);
+                
+                // Clear form
+                clearProductForm();
+
+                // Refresh product list if already loaded
+                if (state.products.length > 0) {
+                    await loadProducts();
+                }
+
+            } catch (error) {
+                console.error('Failed to create product:', error);
+            }
+        }
+
+        // Clear product form
+        function clearProductForm() {
+            document.getElementById('productName').value = '';
+            document.getElementById('productDescription').value = '';
+            document.getElementById('productSku').value = '';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productAllowedRating').checked = true;
+            document.getElementById('productIsPrivateLabel').checked = false;
+            document.getElementById('productIsActive').checked = true;
+        }
+
+        // Render selected products
+        function renderSelectedProducts() {
+            const container = document.getElementById('selectedProducts');
+            
+            if (state.selectedProducts.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center">No products selected yet</p>';
+                document.getElementById('orderTotal').textContent = '0.00';
+                return;
+            }
+
+            container.innerHTML = state.selectedProducts.map(item => {
+                const total = (item.unitPrice * item.quantity).toFixed(2);
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex-1">
+                            <div class="font-semibold">${item.productName}</div>
+                            <div class="text-sm text-gray-500">${item.unitPrice}₼ × ${item.quantity} = ${total}₼</div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="updateQuantity('${item.productId}', -1)" 
+                                    class="w-8 h-8 bg-white border border-gray-300 rounded hover:bg-gray-100">−</button>
+                            <span class="w-8 text-center font-bold">${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.productId}', 1)" 
+                                    class="w-8 h-8 bg-white border border-gray-300 rounded hover:bg-gray-100">+</button>
+                            <button onclick="removeProduct('${item.productId}')" 
+                                    class="ml-2 text-red-600 hover:text-red-800">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Calculate total
+            const total = state.selectedProducts.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+            document.getElementById('orderTotal').textContent = total.toFixed(2);
+        }
+
+        // Create order
+        async function createOrder() {
+            const bonusCardNumber = document.getElementById('bonusCardNumber').value.trim();
+            const marketId = document.getElementById('marketId').value.trim();
+
+            // Validation
+            if (!bonusCardNumber) {
+                alert('❌ Please enter Bonus Card Number');
+                return;
+            }
+
+            if (!marketId) {
+                alert('❌ Please select a Market');
+                return;
+            }
+
+            if (state.selectedProducts.length === 0) {
+                alert('❌ Please add at least one product');
+                return;
+            }
+
+            // Prepare order data (matching CreateOrderDto)
+            const orderData = {
+                bonusCardNumber: bonusCardNumber,
+                marketId: marketId,
+                items: state.selectedProducts.map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity
+                }))
+            };
+            
+            console.log('Creating order:', orderData);
+            
+            // Disable button
+            const btn = document.getElementById('createOrderBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating Order...';
+            
+            try {
+                let orderData = {
+                    bonusCardNumber: bonusCardNumber,
+                    marketId: marketId,
+                    items: state.selectedProducts.map(item => ({
+                        productId: item.productId,
+                        quantity: item.quantity
+                    }))
+                };
+                const response = await apiRequest('/orders', {
+                    method: 'POST',
+                    body: JSON.stringify(orderData)
+                });
+
+                showResponse(response, 'success');
+                
+                orderData = response.data || response;
+                
+                // Show success message
+                alert(`✅ Order created successfully!\n\nOrder ID: ${orderData.orderId || 'N/A'}\nTotal: ${orderData.totalAmount?.toFixed(2) || '0.00'}₼\nBonus Earned: ${orderData.bonusEarned?.toFixed(2) || '0.00'}₼\nItems: ${orderData.itemCount || state.selectedProducts.length}`);
+                
+                // Clear form
+                state.selectedProducts = [];
+                renderSelectedProducts();
+
+            } catch (error) {
+                console.error('Failed to create order:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Create Order';
+            }
+        }
+
+        // Show response
+        function showResponse(data, type = 'info') {
+            const section = document.getElementById('responseSection');
+            const content = document.getElementById('responseContent');
+            
+            content.textContent = JSON.stringify(data, null, 2);
+            content.className = `p-4 rounded-lg overflow-x-auto text-sm ${
+                type === 'success' ? 'bg-green-50 text-green-900' :
+                type === 'error' ? 'bg-red-50 text-red-900' :
+                'bg-gray-50 text-gray-900'
+            }`;
+            
+            section.classList.remove('hidden');
+            // section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 OBA Order Creator initialized');
+            console.log('📍 API URL:', document.getElementById('apiUrl').value);
+        });
+    </script>
+</body>
+</html>
