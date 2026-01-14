@@ -14,6 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
 
     <!-- Icons -->
     <link
@@ -69,6 +70,19 @@
         },
       };
     </script>
+
+    <style>
+      .barcode {
+        font-family: 'Libre Barcode 39', cursive;
+        font-size: 80px;
+        line-height: 1.2;
+        display: inline-block;
+        letter-spacing: 2px;
+        color: #000;
+        background: transparent;
+        min-height: 100px;
+      }
+    </style>
 
     <!-- BACKEND INTEGRATION -->
     <script>
@@ -213,6 +227,7 @@
                       productDetailModalOpen: false,
                       profileModalOpen: false,
                       cardsModalOpen: false,
+                      barcodeModalOpen: false,
 
                       // Pagination for search
                       currentPage: 1,
@@ -578,6 +593,26 @@
                           }[this.lang];
                       },
 
+                      get barcodeDigits() {
+                          // Try different property paths where the card number might be stored
+                          const card = this.user?.bonusCard || this.user?.bonus_card || {};
+                          let num = card.cardNumber || card.card_number || this.user?.cardNumber || this.user?.bonusCardNumber || '';
+                          
+                          // If still empty, try to see if it's buried in 'user' itself
+                          if (!num && this.user) {
+                              num = this.user.cardNumber || '';
+                          }
+
+                          console.log('--- BARCODE DEBUG ---');
+                          console.log('User object:', JSON.parse(JSON.stringify(this.user || {})));
+                          console.log('Extracted Raw Number:', num);
+                          
+                          const digits = num.toString().replace(/\D/g, '');
+                          console.log('Processed Digits:', digits);
+                          
+                          return digits;
+                      },
+
                       get notifications() {
                           return [
                               { id: 1, title: this.getText('notif_cashback_title'), msg: this.getText('notif_cashback_msg'), time: this.getText('time_2h'), type: 'reward' },
@@ -598,6 +633,7 @@
                                   this.productDetailModalOpen || 
                                   this.profileModalOpen || 
                                   this.cardsModalOpen ||
+                                  this.barcodeModalOpen ||
                                   this.selectedReceipt);
                        },
 
@@ -609,6 +645,7 @@
                            this.productDetailModalOpen = false;
                            this.profileModalOpen = false;
                            this.cardsModalOpen = false;
+                           this.barcodeModalOpen = false;
                            this.selectedReceipt = null;
                            this.selectedProductDetail = null;
                            this.selectedRatingItem = null;
@@ -856,9 +893,22 @@
                               console.log('Loading user data...');
 
                               // TOKEN
-                              try {
-                                const response = await api.getUserProfile();
-                              } catch (error) {
+                                try {
+                                  const response = await api.getUserProfile();
+                                  console.log('User Profile Response:', response);
+                                  const updatedUser = response.data || response;
+                                  if (updatedUser) {
+                                    // Preserve bonusCard if missing in server profile response
+                                    const currentCard = this.user?.bonusCard || this.user?.bonus_card;
+                                    if (currentCard && !updatedUser.bonusCard && !updatedUser.bonus_card) {
+                                        updatedUser.bonusCard = currentCard;
+                                    }
+                                    
+                                    this.user = updatedUser;
+                                    localStorage.setItem('oba_user', JSON.stringify(this.user));
+                                    console.log('Updated user in state:', this.user);
+                                  }
+                                } catch (error) {
                                 this.logout()
                                 return;
                               }
@@ -1592,7 +1642,9 @@
 
               <div class="relative z-10 flex justify-between items-end">
                 <div class="flex items-center space-x-3">
-                  <i class="fas fa-qrcode text-2xl opacity-80"></i>
+                  <div @click="barcodeModalOpen = true" class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center cursor-pointer active:scale-90 transition-transform">
+                    <i class="fas fa-barcode text-xl opacity-90"></i>
+                  </div>
                   <div
                     class="text-xs font-mono text-white/70 tracking-widest"
                     x-text="user?.phone?.slice(-4) || '****'"
@@ -2125,6 +2177,7 @@
             <i class="fas fa-search text-xl"></i>
           </button>
           <div
+            @click="barcodeModalOpen = true"
             class="w-14 h-14 bg-white rounded-full flex items-center justify-center -mt-10 border-[6px] border-[#F8F9FB] shadow-xl text-brand-black cursor-pointer active:scale-95 transition-transform"
           >
             <i class="fas fa-qrcode text-2xl"></i>
@@ -2702,6 +2755,46 @@
               </div>
   
               <button @click="instructionsModalOpen = false" class="mt-8 w-full bg-brand-black text-white font-bold py-4 rounded-2xl shadow-xl" x-text="getText('instr_btn')"></button>
+          </div>
+      </div>
+
+      <!-- BARCODE MODAL -->
+      <div x-show="barcodeModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div class="absolute inset-0 bg-brand-black/80 backdrop-blur-md" @click="barcodeModalOpen = false"></div>
+          <div 
+            x-show="barcodeModalOpen"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="scale-90 opacity-0"
+            x-transition:enter-end="scale-100 opacity-100"
+            class="bg-white w-full max-w-sm rounded-[40px] p-8 relative z-10 shadow-2xl overflow-hidden flex flex-col items-center"
+          >
+              <!-- Close Button -->
+              <button @click="barcodeModalOpen = false" class="absolute top-6 right-6 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 active:scale-90 transition-transform">
+                <i class="fas fa-times"></i>
+              </button>
+
+              <div class="w-16 h-1 w-12 bg-gray-100 rounded-full mb-8"></div>
+
+              <div class="text-center mb-10">
+                <h3 class="text-2xl font-extrabold text-gray-900 mb-2">Bonus Kart</h3>
+                <p class="text-sm text-gray-400 font-medium">Kassirə təqdim edin</p>
+              </div>
+
+              <!-- Barcode Design Container -->
+              <div class="bg-white w-full rounded-3xl p-8 flex flex-col items-center justify-center border border-gray-100 shadow-inner mb-8">
+                  <div class="barcode" x-text="'*' + barcodeDigits + '*'" x-show="barcodeDigits"></div>
+                  <div class="mt-6 text-sm font-bold font-mono tracking-[0.2em] text-gray-400" x-text="user?.bonusCard?.cardNumber || user?.bonus_card?.cardNumber || user?.cardNumber || '---- ---- ----'"></div>
+                  
+                  <template x-if="!barcodeDigits">
+                      <div class="text-[10px] text-red-400 font-bold mt-2">Kart nömrəsi tapılmadı</div>
+                  </template>
+              </div>
+
+              <!-- Extra Info -->
+              <div class="flex items-center space-x-2 text-brand-green bg-green-50 px-4 py-2 rounded-full mb-4">
+                  <i class="fas fa-shield-alt text-xs"></i>
+                  <span class="text-[10px] font-bold uppercase tracking-wider">Təhlükəsiz Ödəniş</span>
+              </div>
           </div>
       </div>
     </div>
