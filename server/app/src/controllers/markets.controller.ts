@@ -1,9 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { MarketsService } from '../services/markets.service';
 import { CreateMarketDto } from '@/dtos/create-market.dto';
 import { UpdateMarketDto } from '@/dtos/update-market.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@/guards/auth.guard';
+import { AdminGuard } from '@/guards/admin.guard';
 
 @Controller('markets')
+@ApiTags('Markets')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class MarketsController {
   constructor(private readonly marketsService: MarketsService) {}
 

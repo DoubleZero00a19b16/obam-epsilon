@@ -16,30 +16,30 @@ export class ProductCredit {
   @Column({ type: 'varchar', length: '36' })
   productId: string;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Product price in this order'
   })
   productPrice: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
-    comment: 'Allocated credit from 50% of bonus pool for this product'
+    comment: 'Static reward amount for this product'
   })
   allocatedCredit: number;
 
-  @Column({ 
+  @Column({
     type: 'int',
     unsigned: true,
     comment: 'Points allocated for rating this product (PL=30, Normal=10)'
   })
   ratingPoints: number;
 
-  @Column({ 
+  @Column({
     type: 'boolean',
     default: false,
     comment: 'Whether this credit has been claimed by rating'
@@ -53,11 +53,11 @@ export class ProductCredit {
   updatedAt: Date;
 
   // Relations
-  @ManyToOne(() => Order)
+  @ManyToOne(() => Order, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'orderId' })
   order: Order;
 
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, { onDelete: "CASCADE" })
   @JoinColumn({ name: 'productId' })
   product: Product;
 }

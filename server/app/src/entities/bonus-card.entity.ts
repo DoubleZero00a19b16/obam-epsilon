@@ -13,8 +13,8 @@ export class BonusCard {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Column({ 
-    type: 'boolean', 
+  @Column({
+    type: 'boolean',
     default: true,
     comment: 'Whether the card is active'
   })
@@ -27,7 +27,7 @@ export class BonusCard {
   updatedAt: Date;
 
   // Relations
-  @OneToOne(() => User, user => user.bonusCard)
+  @OneToOne(() => User, user => user.bonusCard, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
@@ -35,13 +35,13 @@ export class BonusCard {
   generateCardNumber() {
     const now = new Date();
     const year = now.getFullYear();
-    
+
     // Generate a random 4-digit suffix to ensure uniqueness 
     // even if two users join at the exact same millisecond
     const random = Math.floor(1000 + Math.random() * 9000);
-    
+
     // Generate a timestamp string (e.g., month + day + hour + minute)
-    const timePart = now.getTime().toString().slice(-6); 
+    const timePart = now.getTime().toString().slice(-6);
 
     // Result: BC-2026-826123
     this.cardNumber = `BC-${year}-${timePart}${random}`.slice(0, 20);

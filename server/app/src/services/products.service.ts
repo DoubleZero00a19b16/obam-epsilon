@@ -10,12 +10,12 @@ import { Repository } from 'typeorm';
 export class ProductsService {
 
   constructor(
-      @InjectRepository(Product)
-      private productRepository: Repository<Product>,
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
 
-      @InjectRepository(Rating)
-      private ratingRepository: Repository<Rating>,
-  ) {}
+    @InjectRepository(Rating)
+    private ratingRepository: Repository<Rating>,
+  ) { }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const product = this.productRepository.create(createProductDto);
@@ -44,46 +44,46 @@ export class ProductsService {
       .limit(10)
       .getMany();
 
-const data = await Promise.all(
-  top10Products.map(async (item) => {
-    const lastTwoReviews = await this.ratingRepository
-      .createQueryBuilder('rating')
-      .leftJoin('rating.user', 'user')
-      .select([
-        'rating.id AS id',
-        'rating.userId AS "userId"',
-        'user.name AS name',
-        'rating.comment AS comment',
-        'rating.createdAt AS "createdAt"',
-        'rating.score AS "score"'
-      ])
-      .where('rating.productId = :productId', { productId: item.id })
-      .orderBy('rating.createdAt', 'DESC')
-      .limit(2)
-      .getRawMany();
+    const data = await Promise.all(
+      top10Products.map(async (item) => {
+        const lastTwoReviews = await this.ratingRepository
+          .createQueryBuilder('rating')
+          .leftJoin('rating.user', 'user')
+          .select([
+            'rating.id AS id',
+            'rating.userId AS "userId"',
+            'user.name AS name',
+            'rating.comment AS comment',
+            'rating.createdAt AS "createdAt"',
+            'rating.score AS "score"'
+          ])
+          .where('rating.productId = :productId', { productId: item.id })
+          .orderBy('rating.createdAt', 'DESC')
+          .limit(2)
+          .getRawMany();
 
-    const ratingDistributionRaw = await this.ratingRepository
-      .createQueryBuilder('rating')
-      .select('rating.score', 'score')
-      .addSelect('COUNT(*)', 'count')
-      .where('rating.productId = :productId', { productId: item.id })
-      .groupBy('rating.score')
-      .getRawMany();
+        const ratingDistributionRaw = await this.ratingRepository
+          .createQueryBuilder('rating')
+          .select('rating.score', 'score')
+          .addSelect('COUNT(*)', 'count')
+          .where('rating.productId = :productId', { productId: item.id })
+          .groupBy('rating.score')
+          .getRawMany();
 
-    const ratingDistribution = { 5:0, 4:0, 3:0, 2:0, 1:0 };
-    ratingDistributionRaw.forEach(r => {
-      ratingDistribution[Number(r.score)] = Number(r.count);
-    });
+        const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        ratingDistributionRaw.forEach(r => {
+          ratingDistribution[Number(r.score)] = Number(r.count);
+        });
 
-    return {
-      ...item,
-      comments: lastTwoReviews,
-      ratingDistribution
-    };
-  })
-);
+        return {
+          ...item,
+          comments: lastTwoReviews,
+          ratingDistribution
+        };
+      })
+    );
 
-return data;
+    return data;
 
   }
 
@@ -93,8 +93,12 @@ return data;
     return await this.productRepository.save(updated);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string; product: Product }> {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
+    return {
+      message: 'Product deleted successfully',
+      product
+    }
   }
 }

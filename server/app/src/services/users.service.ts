@@ -15,7 +15,7 @@ export class UsersService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private readonly clsService: ClsService
-  ) {}
+  ) { }
 
   /**
    * Create a new user
@@ -24,22 +24,22 @@ export class UsersService {
   async create({ name, surname, phone, password, dateOfBirth }: CreateUserDto): Promise<User> {
     // Check if user already exists
     const isUserExist: boolean = !!(await this.findOneByUsername({ phone }));
-    
+
     if (isUserExist) {
       throw new ConflictException('Phone number has already been taken!');
     }
 
     // Create new user (password should already be hashed by auth service)
-    const newUser: User = this.userRepo.create({ 
-      name, 
-      surname, 
-      phone, 
-      dateOfBirth, 
-      password 
+    const newUser: User = this.userRepo.create({
+      name,
+      surname,
+      phone,
+      dateOfBirth,
+      password
     });
 
     await this.userRepo.save(newUser);
-    
+
     return newUser;
   }
 
@@ -57,13 +57,13 @@ export class UsersService {
   /**
    * Find one user by ID
    */
-  async findOne(id: UUID): Promise<User> {
+  async findOne(id: string): Promise<User> {
     const user: User | null = await this.userRepo.findOneBy({ id });
-    
+
     if (!user) {
       throw new NotFoundException('User does not exist');
     }
-    
+
     return user;
   }
 
@@ -76,16 +76,16 @@ export class UsersService {
    * Find one user by custom criteria
    */
   async findOneByUsername(
-    where?: FindOptionsWhere<User>, 
-    select?: FindOptionsSelect<User>, 
+    where?: FindOptionsWhere<User>,
+    select?: FindOptionsSelect<User>,
     relations?: FindOptionsRelations<User>
   ): Promise<User | null> {
-    const user: User | null = await this.userRepo.findOne({ 
-      where, 
-      select, 
-      relations 
+    const user: User | null = await this.userRepo.findOne({
+      where,
+      select,
+      relations
     });
-    
+
     return user;
   }
 
@@ -95,23 +95,19 @@ export class UsersService {
   async update(id: UUID, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
-    // If password is being updated, hash it
-    if (updateUserDto.password) {
-      const saltRounds = 10;
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, saltRounds);
-    }
+
 
     Object.assign(user, updateUserDto);
-    
+
     await this.userRepo.save(user);
-    
+
     return user;
   }
 
   /**
    * Remove user
    */
-  async remove(id: UUID): Promise<User> {
+  async remove(id: string): Promise<User> {
     const user: User = await this.findOne(id);
     await this.userRepo.remove(user);
     return user;

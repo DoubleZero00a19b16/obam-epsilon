@@ -13,25 +13,25 @@ export class Order {
   @Column({ type: 'varchar', length: '36' })
   userId: string;
 
-  @Column({ 
-    type: 'varchar', 
+  @Column({
+    type: 'varchar',
     length: 50,
     nullable: true,
     comment: 'Bonus card number used for this purchase'
   })
   bonusCardNumber: string;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Total order amount in dollars'
   })
   totalAmount: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     default: 0.00,
     comment: 'Bonus earned from this purchase (standard cashback)'
@@ -45,7 +45,7 @@ export class Order {
   updatedAt: Date;
 
   // Relations
-  @ManyToOne(() => User, user => user.orders)
+  @ManyToOne(() => User, user => user.orders, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 

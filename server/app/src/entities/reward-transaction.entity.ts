@@ -18,44 +18,44 @@ export class RewardTransaction {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Column({ 
+  @Column({
     type: 'uuid',
     nullable: true,
     comment: 'Reference to rating if this is a rating reward'
   })
   ratingId: string | null;
 
-  @Column({ 
+  @Column({
     type: 'enum',
     enum: TransactionType,
     default: TransactionType.RATING_REWARD
   })
   type: TransactionType;
 
-  @Column({ 
+  @Column({
     type: 'int',
     unsigned: true,
     comment: 'Points earned in this transaction'
   })
   points: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Bonus amount in dollars'
   })
   amount: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'User balance after this transaction'
   })
   balanceAfter: number;
 
-  @Column({ 
+  @Column({
     type: 'varchar',
     length: 500,
     nullable: true,
@@ -67,11 +67,11 @@ export class RewardTransaction {
   createdAt: Date;
 
   // Relations
-  @ManyToOne(() => User, user => user.rewardTransactions)
+  @ManyToOne(() => User, user => user.rewardTransactions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne(() => Rating, { nullable: true })
+  @ManyToOne(() => Rating, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'ratingId' })
   rating: Rating | null;
 }

@@ -78,7 +78,8 @@
       }
 
       // API Configuration
-      const API_BASE_URL = "http://51.20.93.44:3000/api/v1";
+      const API_BASE_URL = "http://16.171.0.209:3000/api/v1";
+      // const API_BASE_URL = "http://localhost:3000/api/v1";
 
       // API Helper Functions
       const api = {
@@ -213,6 +214,10 @@
                       profileModalOpen: false,
                       cardsModalOpen: false,
 
+                      // Pagination for search
+                      currentPage: 1,
+                      itemsPerPage: 20,
+
                       // lang: 'az',
                       lang: localStorage.getItem('lang'),
 
@@ -223,7 +228,7 @@
                       topProducts: [],
                       orders: [],
 
-                      loginForm: { phone: '+994701234567', password: 'password123' },
+                      loginForm: { phone: '', password: '' },
                       registerForm: {
                         name: '',
                         surname: '',
@@ -244,6 +249,10 @@
 
                       feedbackReason: '',
                       feedbackComment: '',
+
+                      // Navigation state
+                      isBackNavigation: false,
+                      tabWhenModalOpened: null,
 
                       t: {
                           az: {
@@ -581,58 +590,100 @@
                           { id: 2, number: '**** **** **** 1092', type: 'master', bank: 'ABB' }
                       ],
 
-                      get isModalOpen() {
-                          return this.showAllReceipts || 
-                                 this.instructionsModalOpen || 
-                                 this.notificationsOpen || 
-                                 this.feedbackModalOpen || 
-                                 this.productDetailModalOpen || 
-                                 this.profileModalOpen || 
-                                 this.cardsModalOpen || 
-                                 !!this.selectedReceipt;
-                      },
+                       get isModalOpen() {
+                           return !!(this.showAllReceipts || 
+                                  this.instructionsModalOpen || 
+                                  this.notificationsOpen || 
+                                  this.feedbackModalOpen || 
+                                  this.productDetailModalOpen || 
+                                  this.profileModalOpen || 
+                                  this.cardsModalOpen ||
+                                  this.selectedReceipt);
+                       },
 
-                      closeAllModals() {
-                          this.showAllReceipts = false;
-                          this.instructionsModalOpen = false;
-                          this.notificationsOpen = false;
-                          this.feedbackModalOpen = false;
-                          this.productDetailModalOpen = false;
-                          this.profileModalOpen = false;
-                          this.cardsModalOpen = false;
-                          this.selectedReceipt = null;
-                      },
+                       closeAllModals() {
+                           this.showAllReceipts = false;
+                           this.instructionsModalOpen = false;
+                           this.notificationsOpen = false;
+                           this.feedbackModalOpen = false;
+                           this.productDetailModalOpen = false;
+                           this.profileModalOpen = false;
+                           this.cardsModalOpen = false;
+                           this.selectedReceipt = null;
+                           this.selectedProductDetail = null;
+                           this.selectedRatingItem = null;
+                           this.selectedRatingValue = 0;
+                       },
 
-                      setupModalUX() {
-                          // Watch for any modal opening/closing
-                          this.$watch('isModalOpen', (isOpen) => {
-                              // Scroll Lock
-                              document.body.style.overflow = isOpen ? 'hidden' : '';
+                       setupModalUX() {
+                           // 1. Modal Watcher for History Push
+                            this.$watch('isModalOpen', (isOpen) => {
+                                if (isOpen) {
+                                    document.body.style.overflow = 'hidden';
+                                    this.tabWhenModalOpened = this.activeTab;
+                                    if (!history.state?.modalOpen) {
+                                        history.pushState({ modalOpen: true, returnTab: this.tabWhenModalOpened }, '', '');
+                                    }
+                                } else {
+                                    document.body.style.overflow = '';
+                                    this.tabWhenModalOpened = null;
+                                }
+                            });
 
-                              // History Management
-                              if (isOpen) {
-                                  history.pushState({ modalOpen: true }, '', '');
-                              } else {
-                                  // If we have state and it's ours, pop it
-                                  // This handles the "X" button case
-                                  if (history.state && history.state.modalOpen) {
-                                      history.back();
-                                  }
-                              }
-                          });
+                           // 2. Tab Watcher for History Push
+                           this.$watch('activeTab', (newTab, oldTab) => {
+                               // Skip if it's a back navigation (handled by browser or our popstate)
+                               if (this.isBackNavigation) {
+                                   this.isBackNavigation = false;
+                                   return;
+                               }
+                               
+                               // Push state when user clicks a tab (except going to home which is the root)
+                               if (oldTab && newTab !== oldTab && oldTab === 'home') {
+                                   history.pushState({ tab: newTab, fromTab: oldTab }, '', '');
+                               }
+                           });
 
-                          // Handle Browser Back Button
-                          window.addEventListener('popstate', (event) => {
-                              // If a modal is open when back is pressed, close it
-                              if (this.isModalOpen) {
-                                  // We are already 'back', so just update UI state to match
-                                  // But we need to be careful not to trigger the watcher's history.back()
-                                  // Actually, the watcher checks history.state.modalOpen.
-                                  // After popstate, history.state should be null (or previous).
-                                  this.closeAllModals();
-                              }
-                          });
-                      },
+                           // 3. Global Popstate Handler (Once)
+                           if (!window._obaPopstateAttached) {
+                               window._obaPopstateAttached = true;
+                               
+                               window.addEventListener('popstate', (event) => {
+                                   // Defensive check
+                                   if (typeof this.activeTab === 'undefined') return;
+
+                                   const state = event.state;
+                                   const wasModalOpen = this.tabWhenModalOpened !== null;
+
+                                   // Priority 1: Close Modal if it was open
+                                   if (wasModalOpen || this.isModalOpen) {
+                                       const targetTab = this.tabWhenModalOpened || this.activeTab;
+                                       this.closeAllModals();
+                                       
+                                       if (this.activeTab !== targetTab) {
+                                           this.isBackNavigation = true;
+                                           this.activeTab = targetTab;
+                                       }
+                                       
+                                       // Stay on current tab by pushing state back if not on home
+                                       if (targetTab !== 'home') {
+                                           history.pushState({ tab: targetTab, fromTab: 'home' }, '', '');
+                                       }
+                                       this.tabWhenModalOpened = null;
+                                       return;
+                                   }
+
+                                   // Priority 2: Navigate to Home if on other tab
+                                   if (this.activeTab !== 'home') {
+                                       this.isBackNavigation = true;
+                                       this.activeTab = 'home';
+                                       return;
+                                   }
+
+                                   // Priority 3: Exit app (browser default)
+                               });
+                           }
+                       },
 
                       setupPullRefresh() {
                           let startY = 0;
@@ -761,42 +812,41 @@
                             this.setupPullRefresh();
                         },
 
-      // Inside Alpine.data('obaApp', ...)
-      topProducts: [],
+                      async loadTopProducts() {
+                          try {
+                              this.loading = true;
+                              if (!api.getToken()) return; // Prevent 401
+                              // Make sure the endpoint matches your backend
+                              const response = await api.request('/products/top');
 
-      async loadTopProducts() {
-          try {
-              this.loading = true;
-              if (!api.getToken()) return; // Prevent 401
-              // Make sure the endpoint matches your backend
-              const response = await api.request('/products/top');
+                              // Handle different response formats (data wrapper vs direct array)
+                              const rawData = Array.isArray(response) ? response : (response.data || []);
 
-              // Handle different response formats (data wrapper vs direct array)
-              const rawData = Array.isArray(response) ? response : (response.data || []);
+                              if (rawData.length === 0) {
+                                  console.warn("No products found in API response");
+                              }
 
-              if (rawData.length === 0) {
-                  console.warn("No products found in API response");
-              }
+                              this.topProducts = rawData
+                                  .map(p => ({
+                                      ...p,
+                                      // Ensure numbers for sorting/display
+                                      rating: parseFloat(p.averageRating || 0),
+                                      reviews: p.ratingCount || 0,
+                                      rewardAmount: parseFloat(p.rewardAmount || 0),
+                                      rateable: p.allowedRating && parseFloat(p.rewardAmount || 0) > 0,
+                                      // Assign category for your UI styling
+                                      catKey: this.guessCategory(p.name)
+                                  }))
+                                  .sort((a, b) => b.rating - a.rating)
+                                  .slice(0, 10);
 
-              this.topProducts = rawData
-                  .map(p => ({
-                      ...p,
-                      // Ensure numbers for sorting/display
-                      rating: parseFloat(p.averageRating || 0),
-                      reviews: p.ratingCount || 0,
-                      // Assign category for your UI styling
-                      catKey: this.guessCategory(p.name)
-                  }))
-                  .sort((a, b) => b.rating - a.rating)
-                  .slice(0, 10);
-
-              console.log("Top Products Loaded:", this.topProducts);
-          } catch (error) {
-              console.error('Failed to load top products:', error);
-          } finally {
-              this.loading = false;
-          }
-      },
+                              console.log("Top Products Loaded:", this.topProducts);
+                          } catch (error) {
+                              console.error('Failed to load top products:', error);
+                          } finally {
+                              this.loading = false;
+                          }
+                      },
 
                         async loadUserData() {
                           try {
@@ -843,7 +893,8 @@
                                               quantity: p.quantity,
                                               catKey: this.guessCategory(p.name),
                                               type: p.isPrivateLabel ? 'pl' : 'global',
-                                              rateable: p.rewardInfo ? 1 : p.userRating ? 1 : 0,
+                                              rewardAmount: p.rewardInfo?.allocatedCredit || p.rewardAmount || 0,
+                                              rateable: p.rateable && ( (p.rewardInfo?.allocatedCredit || p.rewardAmount || 0) > 0 ),
                                               rated: p.hasUserRated,
                                               userRating: p.userRating?.score || 0,
                                               userRatingId: p.userRating?.id || null,
@@ -867,12 +918,16 @@
                                                   id: product.id,
                                                   name: product.name,
                                                   description: product.description,
-                                                  price: product.price,
-                                                  type: product.isPrivateLabel ? 'pl' : 'global',
-                                                  rateable: product.isPrivateLabel,
-                                                  points: product.isPrivateLabel ? 1 : 0,
-                                                  catKey: this.guessCategory(product.name),
-                                                  rating: product.averageRating || 0,
+                                                   price: product.price,
+                                                   type: product.isPrivateLabel ? 'pl' : 'global',
+                                                   rewardAmount: product.rewardInfo?.allocatedCredit || product.rewardAmount || 0,
+                                                   rateable: product.rateable && ( (product.rewardInfo?.allocatedCredit || product.rewardAmount || 0) > 0 ),
+                                                   rated: product.hasUserRated,
+                                                   userRating: product.userRating?.score || 0,
+                                                   userRatingId: product.userRating?.id || null,
+                                                   points: product.isPrivateLabel ? 1 : 0,
+                                                   catKey: this.guessCategory(product.name),
+                                                   rating: product.averageRating || 0,
                                                   reviews: product.ratingCount || 0
                                               });
                                           }
@@ -990,12 +1045,64 @@
                           return this.t[this.lang].categories[catKey] || catKey;
                       },
 
-                      get filteredProducts() {
-                          return this.products.filter(p => {
-                              const matchesCat = this.selectedCategory === 'All' || p.catKey === this.selectedCategory;
-                              const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
-                              return matchesCat && matchesSearch;
-                          });
+                       get filteredProducts() {
+                           const filtered = this.products.filter(p => {
+                               const matchesCat = this.selectedCategory === 'All' || p.catKey === this.selectedCategory;
+                               const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
+                               return matchesCat && matchesSearch;
+                           });
+                           
+                           // Sort: 
+                           // 1. Unreviewed rateable (rewardAmount DESC)
+                           // 2. Reviewed rateable (rewardAmount DESC)
+                           // 3. Non-rateable
+                           return filtered.sort((a, b) => {
+                               const aUnreviewed = a.rateable && !a.rated;
+                               const bUnreviewed = b.rateable && !b.rated;
+                               
+                               if (aUnreviewed && !bUnreviewed) return -1;
+                               if (!aUnreviewed && bUnreviewed) return 1;
+                               
+                               if (aUnreviewed && bUnreviewed) {
+                                   return (b.rewardAmount || 0) - (a.rewardAmount || 0);
+                               }
+
+                               const aReviewed = a.rateable && a.rated;
+                               const bReviewed = b.rateable && b.rated;
+                               
+                               if (aReviewed && !bReviewed) return -1;
+                               if (!aReviewed && bReviewed) return 1;
+
+                               if (aReviewed && bReviewed) {
+                                   return (b.rewardAmount || 0) - (a.rewardAmount || 0);
+                               }
+
+                               return 0;
+                           });
+                       },
+
+                      get paginatedProducts() {
+                          const start = (this.currentPage - 1) * this.itemsPerPage;
+                          const end = start + this.itemsPerPage;
+                          return this.filteredProducts.slice(start, end);
+                      },
+
+                      get totalPages() {
+                          return Math.ceil(this.filteredProducts.length / this.itemsPerPage);
+                      },
+
+                      nextPage() {
+                          if (this.currentPage < this.totalPages) {
+                              this.currentPage++;
+                              window.scrollTo(0, 0);
+                          }
+                      },
+
+                      prevPage() {
+                          if (this.currentPage > 1) {
+                              this.currentPage--;
+                              window.scrollTo(0, 0);
+                          }
                       },
 
                       get top10Products() {
@@ -1020,6 +1127,7 @@
                               };
 
                               await this.loadUserData();
+                              this.loadTopProducts(); // Load top products after login
                               this.currentView = 'app';
                               this.showToast(this.getText('welcome'), 'success');
 
@@ -1067,6 +1175,7 @@
                           };
                           
                           await this.loadUserData();
+                          this.loadTopProducts(); // Load top products after registration
                           this.currentView = 'app';
                           this.showToast(this.getText('reg_success'), 'success');
                           
@@ -1096,6 +1205,7 @@
 
                       setCategory(key) {
                           this.selectedCategory = key;
+                          this.currentPage = 1; // Reset to page 1 when category changes
                           if(key === 'All') this.searchQuery = '';
                       },
 
@@ -1208,14 +1318,12 @@
           try {
               this.loading = true;
               let response;
+              const newRatingId = item.userRatingId;
 
               // 1. Determine if this is an Update or a New Rating
               if (item.userRatingId) {
                   // It has an ID, so it MUST be an update
                   response = await api.updateRating(item.userRatingId, stars, comment);
-
-                  response = await api.updateRating(item.userRatingId, stars, comment);
-
                   this.showToast(this.getText('updated'), 'success');
                   console.log("Update logic executed. No reward given.");
               } else {
@@ -1238,26 +1346,35 @@
                   this.showToast(`+${earnedAmount.toFixed(2)}₼`, 'success');
               }
 
-              // 3. Update common UI states
-              item.rated = true;
-              item.userRating = stars;
-              item.isUpdating = false; // Reset the local UI flag
-
-              // 4. Update Order Status Optimistically
-              // Find which order this product belongs to and check if all rateable items are now rated
+              // 3. Update ALL instances of this product across ALL receipts (Cross-receipt sync)
+              const productId = item.id;
+              const ratingId = item.userRatingId;
+              
               this.orders.forEach(order => {
-                  const foundProduct = order.items.find(p => p.uniqueId === item.uniqueId || p.id === item.id);
-                  if (foundProduct) {
-                      // Update the product in the order (in case it's a reference copy issue)
-                      foundProduct.rated = true;
-                      
-                      // Check if all rateable products in this order are now rated
-                      const allRated = order.items.filter(p => p.rateable).every(p => p.rated);
-                      if (allRated) {
-                          order.status = 'rated';
+                  order.items.forEach(orderItem => {
+                      // Find all items with the same product ID
+                      if (orderItem.id === productId) {
+                          orderItem.rated = true;
+                          orderItem.userRating = stars;
+                          orderItem.userRatingId = ratingId;
+                          orderItem.isUpdating = false;
                       }
+                  });
+                  
+                  // Check if all rateable products in this order are now rated
+                  const allRated = order.items.filter(p => p.rateable).every(p => p.rated);
+                  if (allRated) {
+                      order.status = 'rated';
                   }
               });
+
+              // 4. Also update the product in the products list for search tab
+              const productInList = this.products.find(p => p.id === productId);
+              if (productInList) {
+                  productInList.rated = true;
+                  productInList.userRating = stars;
+                  productInList.userRatingId = ratingId;
+              }
 
           } catch (error) {
               console.error('Rating Error:', error);
@@ -1303,7 +1420,6 @@
     <div
       id="app"
       x-data="obaApp()"
-      x-init="init()"
       class="w-full min-h-screen relative max-w-md mx-auto bg-[#F8F9FB] shadow-2xl overflow-hidden"
     >
       <!-- LOADING OVERLAY -->
@@ -1372,7 +1488,17 @@
                     <input type="text" x-model="registerForm.name" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('name_placeholder')">
                     <input type="text" x-model="registerForm.surname" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('surname_placeholder')">
                     <input type="tel" x-model="registerForm.phone" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('phone_placeholder')">
-                    <input type="date" x-model="registerForm.dateOfBirth" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all">
+                    <!-- Improved Birthday Input -->
+                    <div class="relative">
+                        <input 
+                            type="date" 
+                            x-model="registerForm.dateOfBirth" 
+                            class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 pr-12 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all"
+                            :class="registerForm.dateOfBirth ? 'text-gray-900' : 'text-gray-400'"
+                            placeholder="Birthday"
+                        >
+                        <i class="fas fa-calendar absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                    </div>
                     <input type="password" x-model="registerForm.password" class="w-full bg-gray-50 border-0 rounded-2xl px-5 py-4 text-gray-900 font-medium placeholder-gray-400 focus:ring-2 focus:ring-brand-green/20 transition-all" :placeholder="getText('password_placeholder')">
                 </div>
                 <button @click="register()" :disabled="loading" class="w-full bg-brand-green text-white font-bold py-4 rounded-2xl shadow-xl shadow-brand-green/20 active:scale-95 transition-transform flex justify-between items-center px-6">
@@ -1677,56 +1803,121 @@
             </div>
 
             <div class="space-y-3">
-              <template x-for="product in filteredProducts" :key="product.id">
+              <template x-for="product in paginatedProducts" :key="product.id">
                 <div
-                  class="bg-white p-4 rounded-3xl shadow-card border border-gray-50 flex items-center justify-between group"
+                  class="bg-white p-4 rounded-3xl shadow-card border border-gray-50 group"
                 >
-                  <div class="flex items-center space-x-4">
-                    <div
-                      class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl squircle"
-                      :class="getCategoryStyle(product.catKey)"
-                    >
-                      <i
-                        class="fas"
-                        :class="getCategoryIcon(product.catKey)"
-                      ></i>
-                    </div>
-                    <div>
-                      <h4
-                        class="font-bold text-gray-900 text-sm"
-                        x-text="product.name"
-                      ></h4>
-                      <div class="flex items-center space-x-2 mt-1">
-                        <span
-                          class="text-[10px] font-bold text-gray-400 uppercase tracking-wide"
-                          x-text="getCategoryName(product.catKey)"
-                        ></span>
-                        <template x-if="product.type === 'new'">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                      <div
+                        class="w-14 h-14 rounded-2xl flex items-center justify-center text-xl squircle"
+                        :class="getCategoryStyle(product.catKey)"
+                      >
+                        <i
+                          class="fas"
+                          :class="getCategoryIcon(product.catKey)"
+                        ></i>
+                      </div>
+                      <div>
+                        <h4
+                          class="font-bold text-gray-900 text-sm"
+                          x-text="product.name"
+                        ></h4>
+                        <div class="flex items-center space-x-2 mt-1">
                           <span
-                            class="text-[9px] bg-brand-lime text-black px-2 py-0.5 rounded font-bold"
-                            >YENİ</span
-                          >
-                        </template>
+                            class="text-[10px] font-bold text-gray-400 uppercase tracking-wide"
+                            x-text="getCategoryName(product.catKey)"
+                          ></span>
+                          <template x-if="product.type === 'new'">
+                            <span
+                              class="text-[9px] bg-brand-lime text-black px-2 py-0.5 rounded font-bold"
+                              >YENİ</span
+                            >
+                          </template>
+                        </div>
                       </div>
                     </div>
+                    <div class="text-right">
+                      <p
+                        class="font-bold text-gray-900"
+                        x-text="product.price + '₼'"
+                      ></p>
+                    </div>
                   </div>
-                  <div class="text-right">
-                    <p
-                      class="font-bold text-gray-900"
-                      x-text="product.price + '₼'"
-                    ></p>
-                  </div>
+
+                  <!-- Rating Section for Search Tab -->
+                  <template x-if="product.rateable">
+                    <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                      <div class="flex items-center">
+                        <template x-for="i in 5">
+                          <button
+                            @click="!product.rated || product.isEditing ? rateItem(product, i) : null"
+                            class="text-xl px-0.5 transition-all active:scale-90"
+                            :class="i <= (product.userRating || 0) ? 'text-brand-lime drop-shadow-sm' : 'text-gray-200'"
+                          >
+                            <i class="fas fa-star"></i>
+                          </button>
+                        </template>
+                      </div>
+                      
+                      <template x-if="product.rated">
+                        <button
+                          @click="enableEdit(product)"
+                          class="text-[10px] font-bold text-gray-400 hover:text-brand-green flex items-center px-2 py-1 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          <i class="fas fa-pencil-alt mr-1"></i> <span x-text="getText('edit')"></span>
+                        </button>
+                      </template>
+                      <template x-if="!product.rated && !product.isUpdating">
+                        <span
+                          class="text-[10px] text-brand-green font-bold bg-green-50 px-2 py-1 rounded"
+                          x-text="'+' + (product.rewardAmount).toFixed(2) + '₼'"
+                        ></span>
+                      </template>
+                    </div>
+                  </template>
                 </div>
               </template>
+              
+              <!-- Pagination Controls -->
+              <div x-show="totalPages > 1" class="flex items-center justify-center space-x-2 pt-4">
+                <button
+                  @click="prevPage()"
+                  :disabled="currentPage === 1"
+                  :class="currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'"
+                  class="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-600 font-bold transition-all"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                
+                <div class="flex items-center space-x-1">
+                  <template x-for="page in totalPages" :key="page">
+                    <button
+                      @click="currentPage = page"
+                      :class="currentPage === page ? 'bg-brand-green text-white' : 'bg-white text-gray-600'"
+                      class="w-10 h-10 rounded-xl shadow-sm font-bold transition-all active:scale-95"
+                      x-text="page"
+                    ></button>
+                  </template>
+                </div>
+                
+                <button
+                  @click="nextPage()"
+                  :disabled="currentPage === totalPages"
+                  :class="currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'"
+                  class="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-600 font-bold transition-all"
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- TOP 10 TAB -->
-          <div
-            x-show="activeTab === 'top10'"
-            x-init="loadTopProducts()"
-            class="space-y-6 animate-enter"
-          >
+           <div
+             x-show="activeTab === 'top10'"
+             class="space-y-6 animate-enter"
+           >
             <div class="space-y-3">
               <template x-if="loading && topProducts.length === 0">
                 <div class="text-center py-10">
@@ -2072,11 +2263,11 @@
       <!-- PRODUCT DETAIL MODAL -->
       <div
         x-show="productDetailModalOpen"
-        class="fixed inset-0 z-[70] flex items-end sm:items-center sm:justify-center p-4"
+        class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4"
       >
         <div
           class="absolute inset-0 bg-brand-black/50 backdrop-blur-sm"
-          @click="productDetailModalOpen = false"
+          @click="productDetailModalOpen = false; selectedProductDetail = null"
         ></div>
         <div
           class="bg-white w-full max-w-sm rounded-[32px] p-6 relative z-10 animate-enter max-h-[85vh] overflow-y-auto"
@@ -2096,20 +2287,20 @@
                 <div>
                   <h2
                     class="text-xl font-bold text-gray-900 leading-tight"
-                    x-text="selectedProductDetail.name"
+                    x-text="selectedProductDetail?.name"
                   ></h2>
                   <p
                     class="text-gray-400 text-sm mt-1"
-                    x-text="selectedProductDetail.sku"
+                    x-text="selectedProductDetail?.sku"
                   ></p>
                   <div class="flex items-center mt-2 text-yellow-500 font-bold">
                     <span
-                      x-text="parseFloat(selectedProductDetail.averageRating).toFixed(1)"
+                      x-text="parseFloat(selectedProductDetail?.averageRating || 0).toFixed(1)"
                     ></span>
                     <i class="fas fa-star text-xs ml-1"></i>
                     <span
                       class="text-gray-300 text-xs font-normal ml-2"
-                      x-text="`(${selectedProductDetail.ratingCount} rəy)`"
+                      x-text="selectedProductDetail ? `(${selectedProductDetail.ratingCount} rəy)` : ''"
                     ></span>
                   </div>
                 </div>
@@ -2125,12 +2316,12 @@
                   <template x-for="star in [5,4,3,2,1]">
                     <div
                       class="flex-1 bg-brand-green rounded-t transition-all duration-500 relative group"
-                      :style="`height: ${selectedProductDetail.ratingCount > 0 ? (selectedProductDetail.ratingDistribution[star] / selectedProductDetail.ratingCount * 100) : 0}%`"
-                      :class="selectedProductDetail.ratingDistribution[star] > 0 ? 'opacity-90' : 'opacity-20 bg-gray-300'"
+                      :style="`height: ${selectedProductDetail?.ratingCount > 0 ? ((selectedProductDetail?.ratingDistribution?.[star] || 0) / selectedProductDetail.ratingCount * 100) : 0}%`"
+                      :class="(selectedProductDetail?.ratingDistribution?.[star] || 0) > 0 ? 'opacity-90' : 'opacity-20 bg-gray-300'"
                     >
                       <div
                         class="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap"
-                        x-text="selectedProductDetail.ratingDistribution[star] + ' nəfər'"
+                        x-text="(selectedProductDetail?.ratingDistribution?.[star] || 0) + ' nəfər'"
                       ></div>
                     </div>
                   </template>
@@ -2146,7 +2337,7 @@
               <h3 class="font-bold text-gray-900 mb-3">Son Rəylər</h3>
               <div class="space-y-3">
                 <template
-                  x-for="comment in selectedProductDetail.comments"
+                  x-for="comment in (selectedProductDetail?.comments || [])"
                   :key="comment.id"
                 >
                   <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -2231,7 +2422,7 @@
           <div class="flex-1 overflow-y-auto p-4 space-y-3">
             <template x-if="selectedReceipt">
               <template
-                x-for="(item, index) in selectedReceipt.items"
+                x-for="item in (selectedReceipt?.items || []).sort((a, b) => (b.rewardAmount || 0) - (a.rewardAmount || 0))"
                 :key="item.uniqueId"
               >
                 <!-- ITEM CARD -->
@@ -2245,9 +2436,9 @@
                   <div class="flex items-center space-x-3 relative z-10">
                     <div
                       class="w-12 h-12 rounded-xl flex items-center justify-center text-sm shrink-0"
-                      :class="getCategoryStyle(item.catKey)"
+                      :class="getCategoryStyle(item?.catKey)"
                     >
-                      <i class="fas" :class="getCategoryIcon(item.catKey)"></i>
+                      <i class="fas" :class="getCategoryIcon(item?.catKey)"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 mb-0.5">
@@ -2304,11 +2495,11 @@
                           <i class="fas fa-pencil-alt mr-1"></i> <span x-text="getText('edit')"></span>
                         </button>
                       </template>
-                      <template x-if="!item.rated">
+                      <template x-if="!item.rated && !item.isUpdating">
                         <span
                           class="text-[10px] text-brand-green font-bold bg-green-50 px-2 py-1 rounded"
-                          >+0.01₼</span
-                        >
+                          x-text="'+' + (item.rewardInfo?.allocatedCredit || item.rewardAmount).toFixed(2) + '₼'"
+                        ></span>
                       </template>
                     </div>
                   </template>

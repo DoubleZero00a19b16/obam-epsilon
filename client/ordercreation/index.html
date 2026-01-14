@@ -339,6 +339,32 @@
             }
         }
 
+        // Helper to fix Azerbaijani character encoding issues (Mojibake)
+        function fixEncoding(str) {
+            if (!str) return str;
+            try {
+                // Map for CP1252 "special" bytes that JS interprets as fancy characters
+                const specialChars = {
+                    8364: 0x80, 8218: 0x82, 402: 0x83, 8222: 0x84, 8230: 0x85, 8224: 0x86, 8225: 0x87,
+                    710: 0x88, 8240: 0x89, 352: 0x8A, 8249: 0x8B, 338: 0x8C, 381: 0x8E, 8216: 0x91,
+                    8217: 0x92, 8220: 0x93, 8221: 0x94, 8226: 0x95, 8211: 0x96, 8212: 0x97, 732: 0x98,
+                    8482: 0x99, 353: 0x9A, 8250: 0x9B, 339: 0x9C, 382: 0x9E, 376: 0x9F
+                };
+
+                const bytes = new Uint8Array(str.length);
+                for (let i = 0; i < str.length; i++) {
+                    const code = str.charCodeAt(i);
+                    // Use special map if it's a fancy char, otherwise take lower byte
+                    bytes[i] = specialChars[code] || (code < 256 ? code : 63);
+                }
+
+                return new TextDecoder('utf-8').decode(bytes);
+            } catch (e) {
+                console.warn('Encoding fix failed:', e);
+                return str;
+            }
+        }
+
         // Login function
         async function login() {
             const phone = document.getElementById('loginPhone').value.trim();
@@ -449,7 +475,17 @@
         async function loadMarkets() {
             try {
                 const response = await apiRequest('/markets', { loadingMessage: 'Loading Markets...' });
-                state.markets = response.data || response || [];
+                const rawMarkets = response.data || response || [];
+                
+                // Fix encoding for each market before storing in state
+                state.markets = rawMarkets.map(market => ({
+                    ...market,
+                    name: fixEncoding(market.name),
+                    address: fixEncoding(market.address)
+                }));
+
+                console.log('Fixed markets:', state.markets.map(m => m.name).slice(0, 5));
+
                 renderMarkets();
                 
                 document.getElementById('marketList').classList.remove('hidden');

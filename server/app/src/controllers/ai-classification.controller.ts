@@ -1,22 +1,26 @@
-import { Controller, Get, Delete, Param, Query, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Delete, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { AiClassificationService } from '@/services/ai-classification.service';
 import { AiClassificationDto, ClassificationStatsDto } from '@/dtos/ai-classification.dto';
+import { JwtAuthGuard } from '@/guards/auth.guard';
+import { AdminGuard } from '@/guards/admin.guard';
 
 @Controller('ai-classifications')
+@UseGuards(JwtAuthGuard, AdminGuard)
 @ApiTags('AI Classifications')
+@ApiBearerAuth('JWT-auth')
 export class AiClassificationController {
   constructor(
     private readonly aiClassificationService: AiClassificationService,
-  ) {}
+  ) { }
 
   @Get('health')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Check FastAPI service health',
     description: 'Verify if the FastAPI classification service is available'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Health check result',
     schema: {
       example: {
@@ -39,14 +43,14 @@ export class AiClassificationController {
   }
 
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all AI classifications',
     description: 'Retrieve all comment classifications with pagination'
   })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
   @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Classifications retrieved successfully',
     type: [AiClassificationDto]
   })
@@ -63,12 +67,12 @@ export class AiClassificationController {
   }
 
   @Get('rating/:ratingId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get classifications for a specific rating',
     description: 'Retrieve all topic classifications for a given rating'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Classifications found',
     type: [AiClassificationDto]
   })
@@ -82,12 +86,12 @@ export class AiClassificationController {
   }
 
   @Get('product/:productId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all classifications for a product',
     description: 'Retrieve all comment classifications across all ratings for a product'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Product classifications found',
     type: [AiClassificationDto]
   })
@@ -102,12 +106,12 @@ export class AiClassificationController {
   }
 
   @Get('product/:productId/stats')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get classification statistics for a product',
     description: 'Get aggregated topic statistics (count, confidence, percentage) for a product'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Statistics retrieved successfully',
     type: [ClassificationStatsDto],
     schema: {
@@ -141,12 +145,12 @@ export class AiClassificationController {
   }
 
   @Get('stats/global')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get global topic distribution',
     description: 'Get topic statistics across all products and ratings'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Global statistics retrieved',
     type: [ClassificationStatsDto]
   })
@@ -160,12 +164,12 @@ export class AiClassificationController {
   }
 
   @Get(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get classification by ID',
     description: 'Retrieve a specific classification with full details'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Classification found',
     type: AiClassificationDto
   })
@@ -180,7 +184,7 @@ export class AiClassificationController {
   }
 
   @Delete(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Delete a classification',
     description: 'Remove a classification from the system'
   })

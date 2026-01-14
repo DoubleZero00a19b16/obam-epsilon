@@ -5,6 +5,11 @@ import { Rating } from './rating.entity';
 import { RewardTransaction } from './reward-transaction.entity';
 import * as bcyrpt from 'bcrypt'
 
+export enum Role {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -25,10 +30,10 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
-    scale: 2, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
     default: 0.00,
     comment: 'Bonus balance in dollars'
   })
@@ -39,6 +44,13 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column({
+    type: 'enum',
+    enum: Role,
+    default: Role.USER,
+  })
+  role: Role;
 
   // Relations
   @OneToOne(() => BonusCard, bonusCard => bonusCard.user)

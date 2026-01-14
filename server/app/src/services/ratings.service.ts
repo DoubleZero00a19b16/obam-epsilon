@@ -41,18 +41,19 @@ export class RatingsService {
     private clsService: ClsService,
     @Inject(forwardRef(() => AiClassificationService))
     private aiClassificationService: AiClassificationService,
-  ) {}
+  ) { }
 
   /**
    * Submit a product rating with automatic reward calculation and distribution
    * Uses database transaction to ensure atomicity
    * Automatically classifies comment using AI
    */
-  async createRating(userId: string, createRatingDto: CreateRatingDto): Promise<RatingResponseDto> {
+  async createRating(createRatingDto: CreateRatingDto): Promise<RatingResponseDto> {
     const { productId, score, comment } = createRatingDto;
 
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
 
 
     // Use QueryRunner for transaction management
@@ -95,7 +96,7 @@ export class RatingsService {
       });
 
       // Filter credits that belong to user's orders
-      const userCredits = unclaimedCredits.filter(credit => 
+      const userCredits = unclaimedCredits.filter(credit =>
         credit.order && credit.order.userId === userId
       );
 
@@ -119,18 +120,6 @@ export class RatingsService {
       });
 
       const savedRating = await queryRunner.manager.save(Rating, rating);
-
-      // 6. 🤖 AI CLASSIFICATION: Automatically classify comment if provided
-      if (comment && comment.trim().length > 0) {
-        try {
-          // Classification happens after rating is saved (within transaction)
-          await this.aiClassificationService.classifyComment(savedRating.id, comment);
-        } catch (classificationError) {
-          // Log error but don't fail the rating creation
-          console.error('AI Classification failed:', classificationError);
-          // Classification failure shouldn't rollback the entire transaction
-        }
-      }
 
       // 7. Mark credit as claimed
       creditToUse.isClaimed = true;
@@ -165,6 +154,17 @@ export class RatingsService {
       // Commit transaction
       await queryRunner.commitTransaction();
 
+      // 11. 🤖 AI CLASSIFICATION: Automatically classify comment if provided
+      // Classification happens AFTER transaction commit to ensure visibility and performance
+      if (comment && comment.trim().length > 0) {
+        try {
+          await this.aiClassificationService.classifyComment(savedRating.id, comment);
+        } catch (classificationError) {
+          // Log error but don't fail the rating creation
+          console.error('AI Classification failed:', classificationError);
+        }
+      }
+
       // 11. Return response
       return {
         id: savedRating.id,
@@ -188,83 +188,80 @@ export class RatingsService {
   }
 
   async updateRating(
-  ratingId: string,
-  updateRatingDto: UpdateRatingDto
-): Promise<RatingResponseDto> {
-  
-  const userId = this.clsService.get("user").id
-  
-  const rating = await this.ratingsRepository.findOne({
-    where: { id: ratingId },
-    relations: ['product']
-  });
-  
-  if (!rating) {
-    throw new NotFoundException('Rating not found');
-  }
+    ratingId: string,
+    updateRatingDto: UpdateRatingDto
+  ): Promise<RatingResponseDto> {
 
+    const userId = this.clsService.get("user").id
 
-  console.log(rating.userId);
-  console.log(userId);
-  
-  // 2. Verify ownership
-  if (rating.userId !== userId) {
-    throw new ForbiddenException('You can only update your own ratings');
-  }
-  
-  // 3. Update in transaction
-  const queryRunner = this.dataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-  
-  try {
-    // Apply updates
-    if (updateRatingDto.score !== undefined) rating.score = updateRatingDto.score;
-    if (updateRatingDto.comment !== undefined) rating.comment = updateRatingDto.comment;
-    
-    const savedRating = await queryRunner.manager.save(Rating, rating);
-    
-    await queryRunner.manager.delete('AiClassification', { ratingId: rating.id });
+    const rating = await this.ratingsRepository.findOne({
+      where: { id: ratingId },
+      relations: ['product']
+    });
 
-    // 4. Handle AI Re-classification if comment changed
-    if (updateRatingDto.comment !== undefined) {
-      await this.aiClassificationService.classifyRating(
-        savedRating.id,
-        savedRating.comment,
-        queryRunner.manager
-      );
+    if (!rating) {
+      throw new NotFoundException('Rating not found');
     }
-    
-    // 5. Recalculate product rating stats (Avg/Count)
-    await this.updateProductRatingStats(rating.productId, queryRunner.manager);
-    
-    await queryRunner.commitTransaction();
-    
-    // 6. Return mapped response
-    return {
-      id: savedRating.id,
-      productId: rating.product.id,
-      productName: rating.product.name,
-      score: savedRating.score,
-      comment: savedRating.comment,
-      rewardPoints: savedRating.rewardPoints,
-      rewardAmount: savedRating.rewardAmount,
-      createdAt: savedRating.createdAt
-    };
-  } catch (error) {
-    await queryRunner.rollbackTransaction();
-    throw error;
-  } finally {
-    await queryRunner.release();
+
+
+
+
+    // 2. Verify ownership
+    if (rating.userId !== userId) {
+      throw new ForbiddenException('You can only update your own ratings');
+    }
+
+    // 3. Update in transaction
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Apply updates
+      if (updateRatingDto.score !== undefined) rating.score = updateRatingDto.score;
+      if (updateRatingDto.comment !== undefined) rating.comment = updateRatingDto.comment;
+
+      const savedRating = await queryRunner.manager.save(Rating, rating);
+
+      await queryRunner.manager.delete('AiClassification', { ratingId: rating.id });
+
+      // 4. Handle AI Re-classification if comment changed
+      if (updateRatingDto.comment !== undefined) {
+        await this.aiClassificationService.classifyRating(
+          savedRating.id,
+          savedRating.comment,
+          queryRunner.manager
+        );
+      }
+
+      // 5. Recalculate product rating stats (Avg/Count)
+      await this.updateProductRatingStats(rating.productId, queryRunner.manager);
+
+      await queryRunner.commitTransaction();
+
+      // 6. Return mapped response
+      return {
+        id: savedRating.id,
+        productId: rating.product.id,
+        productName: rating.product.name,
+        score: savedRating.score,
+        comment: savedRating.comment,
+        rewardPoints: savedRating.rewardPoints,
+        rewardAmount: savedRating.rewardAmount,
+        createdAt: savedRating.createdAt
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
-}
 
   /**
    * Verify that a user has purchased a specific product
    */
   private async verifyUserPurchase(userId: string, productId: string, manager: any): Promise<boolean> {
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
     const orderItem = await manager
       .createQueryBuilder(OrderItem, 'orderItem')
       .innerJoin('orderItem.order', 'order')
@@ -364,9 +361,10 @@ export class RatingsService {
   /**
    * Get all ratings submitted by a user with AI classifications
    */
-  async getUserRatings(userId: string): Promise<RatingResponseDto[]> {
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
+  async getUserRatings(): Promise<RatingResponseDto[]> {
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
     const ratings = await this.ratingsRepository.find({
       where: { userId },
       relations: ['product', 'aiClassifications'],

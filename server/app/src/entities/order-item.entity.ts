@@ -13,27 +13,27 @@ export class OrderItem {
   orderId: string;
 
   @Index('idx_order_item_product')
-  @Column({ type: 'uuid' })
-  productId: string;
+  @Column({ type: 'uuid', nullable: true })
+  productId: string | null;
 
-  @Column({ 
+  @Column({
     type: 'int',
     unsigned: true,
     comment: 'Quantity of this product in the order'
   })
   quantity: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Unit price at time of purchase'
   })
   unitPrice: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Total price for this line item (quantity × unitPrice)'
   })
@@ -43,11 +43,11 @@ export class OrderItem {
   createdAt: Date;
 
   // Relations
-  @ManyToOne(() => Order, order => order.items)
+  @ManyToOne(() => Order, order => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'orderId' })
   order: Order;
 
-  @ManyToOne(() => Product, product => product.orderItems)
+  @ManyToOne(() => Product, product => product.orderItems, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'productId' })
-  product: Product;
+  product: Product | null;
 }

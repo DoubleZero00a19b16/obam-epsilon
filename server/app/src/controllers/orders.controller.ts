@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, HttpStatus, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, HttpStatus, HttpCode, Delete, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { OrdersService } from '../services/orders.service';
-import { MyOrdersResponseDto, GetMyOrdersQueryDto, ProductInOrderDto } from '../dtos/order.dto';
+import { MyOrdersResponseDto, GetMyOrdersQueryDto, ProductInOrderDto, DeleteOrderResponseDto } from '../dtos/order.dto';
 import { CreateOrderDto, OrderCreatedResponseDto } from '../dtos/create-order.dto';
 import { JwtAuthGuard } from '@/guards/auth.guard';
+import { AdminGuard } from '@/guards/admin.guard';
 
 /**
  * Controller for order and purchase history operations
@@ -14,15 +15,16 @@ import { JwtAuthGuard } from '@/guards/auth.guard';
 @UseGuards(JwtAuthGuard) // Uncomment when implementing authentication
 @ApiBearerAuth('JWT-auth')
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: OrdersService) { }
 
   /**
    * POST /orders
    * Create a new order with products
-   */
+  */
+  @UseGuards(AdminGuard)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create new order',
     description: 'Create a new order by providing bonus card and products. Automatically calculates total and bonus cashback (5%).',
   })
@@ -37,13 +39,11 @@ export class OrdersController {
   })
   async createOrder(
     @Body() createOrderDto: CreateOrderDto,
-    @Req() req: any,
   ): Promise<{
     statusCode: number;
     message: string;
     data: OrderCreatedResponseDto;
   }> {
-    // const userId = req.user?.id || 'mock-user-id';
     const order = await this.ordersService.createOrder(createOrderDto);
 
     return {
@@ -60,7 +60,7 @@ export class OrdersController {
    * 2. Rating count - Most popular products first
    */
   @Get('my-orders')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get my orders',
     description: 'Retrieve user\'s purchase history. Products are automatically sorted by PL status (PL first) and then by popularity (rating count).',
   })
@@ -71,14 +71,12 @@ export class OrdersController {
   })
   async getMyOrders(
     @Query() query: GetMyOrdersQueryDto,
-    @Req() req: any,
   ): Promise<{
     statusCode: number;
     message: string;
     data: MyOrdersResponseDto[];
   }> {
-    const userId = req.user?.id || 'mock-user-id';
-    const orders = await this.ordersService.getMyOrders(userId, query);
+    const orders = await this.ordersService.getMyOrders(query);
 
     return {
       statusCode: HttpStatus.OK,
@@ -88,11 +86,48 @@ export class OrdersController {
   }
 
   /**
+   * GET /orders/admin/:orderId
+   * Admin: Get details of any order
+   */
+  @Get('admin/:orderId')
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Get order by ID (Admin)',
+    description: 'Retrieve detailed information about any order (Admin only)',
+  })
+  @ApiParam({
+    name: 'orderId',
+    description: 'UUID of the order',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order details retrieved successfully',
+    type: MyOrdersResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Order not found',
+  })
+  async getOrderByIdAdmin(
+    @Param('orderId') orderId: string,
+  ): Promise<{
+    statusCode: number;
+    data: MyOrdersResponseDto;
+  }> {
+    const order = await this.ordersService.getOrderByIdAdmin(orderId);
+
+    return {
+      statusCode: HttpStatus.OK,
+      data: order
+    };
+  }
+
+  /**
    * GET /orders/:orderId
    * Get details of a specific order
    */
   @Get(':orderId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get order by ID',
     description: 'Retrieve detailed information about a specific order',
   })
@@ -112,13 +147,11 @@ export class OrdersController {
   })
   async getOrderById(
     @Param('orderId') orderId: string,
-    @Req() req: any,
   ): Promise<{
     statusCode: number;
     data: MyOrdersResponseDto;
   }> {
-    const userId = req.user?.id || 'mock-user-id';
-    const order = await this.ordersService.getOrderById(userId, orderId);
+    const order = await this.ordersService.getOrderById(orderId);
 
     return {
       statusCode: HttpStatus.OK,
@@ -131,7 +164,7 @@ export class OrdersController {
    * Get products that haven't been rated yet
    */
   @Get('my-orders/unrated')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get unrated products',
     description: 'Retrieve all products from completed orders that the user hasn\'t rated yet. Perfect for prompting reviews.',
   })
@@ -140,19 +173,16 @@ export class OrdersController {
     description: 'Unrated products retrieved successfully',
     type: [ProductInOrderDto],
   })
-  async getUnratedProducts(
-    @Req() req: any,
-  ): Promise<{
+  async getUnratedProducts(): Promise<{
     statusCode: number;
     message: string;
     data: ProductInOrderDto[];
   }> {
-    const userId = req.user?.id || 'mock-user-id';
-    const products = await this.ordersService.getUnratedProducts(userId);
+    const products = await this.ordersService.getUnratedProducts();
 
     return {
       statusCode: HttpStatus.OK,
-      message: products.length > 0 
+      message: products.length > 0
         ? `You have ${products.length} product(s) waiting for your review! Rate them to earn bonus points.`
         : 'Great job! You\'ve rated all your purchased products.',
       data: products
@@ -164,7 +194,7 @@ export class OrdersController {
    * Get order statistics
    */
   @Get('my-orders/stats')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get order statistics',
     description: 'Get user\'s order statistics including total orders, total spent, and total bonus earned',
   })
@@ -185,9 +215,7 @@ export class OrdersController {
       },
     },
   })
-  async getOrderStats(
-    @Req() req: any,
-  ): Promise<{
+  async getOrderStats(): Promise<{
     statusCode: number;
     data: {
       totalOrders: number;
@@ -195,12 +223,39 @@ export class OrdersController {
       totalBonusEarned: number;
     };
   }> {
-    const userId = req.user?.id || 'mock-user-id';
-    const stats = await this.ordersService.getOrderStats(userId);
+    const stats = await this.ordersService.getOrderStats();
 
     return {
       statusCode: HttpStatus.OK,
       data: stats
     };
+  }
+
+  /**
+   * DELETE /orders/:id
+   * Admin: Delete an order
+   */
+  @Delete(':id')
+  @UseGuards(AdminGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete order (Admin)',
+    description: 'Delete an order and all its related data (items, credits). Admin only.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the order to delete',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order deleted successfully',
+    type: DeleteOrderResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Order not found',
+  })
+  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<DeleteOrderResponseDto> {
+    return this.ordersService.deleteOrder(id);
   }
 }

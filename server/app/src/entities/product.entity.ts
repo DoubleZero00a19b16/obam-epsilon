@@ -17,25 +17,25 @@ export class Product {
   @Column({ type: 'varchar', length: 100, nullable: true })
   sku: string;
 
-  @Column({ 
-    type: 'boolean', 
+  @Column({
+    type: 'boolean',
     default: true,
     name: 'allowed_rating',
     comment: 'True if this product can be rated and earn credits'
   })
   allowedRating: boolean;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Product price in dollars'
   })
   price: number;
 
   @Index('idx_is_private_label')
-  @Column({ 
-    type: 'boolean', 
+  @Column({
+    type: 'boolean',
     default: false,
     name: 'is_private_label',
     comment: 'True if this is a Private Label (PL) product'
@@ -43,8 +43,8 @@ export class Product {
   isPrivateLabel: boolean;
 
   @Index('idx_rating_count')
-  @Column({ 
-    type: 'int', 
+  @Column({
+    type: 'int',
     unsigned: true,
     default: 0,
     name: 'rating_count',
@@ -52,23 +52,42 @@ export class Product {
   })
   ratingCount: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 3, 
+  @Column({
+    type: 'decimal',
+    precision: 3,
     scale: 2,
     default: 0.00,
+
     name: 'average_rating',
     comment: 'Average rating score (1.00 to 5.00)'
   })
   averageRating: number;
 
-  @Column({ 
-    type: 'boolean', 
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0.00,
+    name: 'reward_amount',
+    comment: 'Static reward amount in dollars for rating this product'
+  })
+  rewardAmount: number;
+
+  @Column({
+    type: 'boolean',
     default: true,
     name: 'is_active',
     comment: 'Whether the product is active in the catalog'
   })
   isActive: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    name: 'is_new',
+    comment: 'Whether the product is marked as new'
+  })
+  isNew: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

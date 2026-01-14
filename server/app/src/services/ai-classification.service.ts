@@ -26,6 +26,7 @@ export class AiClassificationService {
     this.fastApiUrl = this.configService.get<string>(
       'FASTAPI_URL',
       'http://fastapi-api:8000'
+      // 'http://localhost:8000'
     );
   }
 

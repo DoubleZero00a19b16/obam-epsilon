@@ -33,6 +33,12 @@ export class ProductInOrderDto {
   @ApiProperty({ description: 'Has the user rated this product', example: false })
   hasUserRated: boolean;
 
+  @ApiProperty({ description: 'Can this product be rated', example: true })
+  rateable: boolean;
+
+  @ApiProperty({ description: 'Standard reward amount for rating this product', example: 0.10 })
+  rewardAmount: number;
+
   @ApiPropertyOptional({
     description: 'User\'s rating for this product if exists',
     example: { score: 5, comment: 'Great!', createdAt: '2024-12-20T15:30:00.000Z' },
@@ -83,4 +89,15 @@ export class GetMyOrdersQueryDto {
   @IsInt()
   @Min(0)
   offset?: number;
+}
+
+export class DeleteOrderResponseDto {
+  @ApiProperty({ description: 'Order ID', example: '550e8400-e29b-41d4-a716-446655440030' })
+  id: string;
+
+  @ApiProperty({ description: 'Status message', example: 'Order deleted successfully' })
+  message: string;
+
+  @ApiProperty({ description: 'Timestamp of deletion', example: '2024-12-20T15:30:00.000Z' })
+  deletedAt: Date;
 }

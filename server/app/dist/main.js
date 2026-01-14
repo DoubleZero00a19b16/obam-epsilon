@@ -121,6 +121,8 @@ const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const ai_classification_service_1 = __webpack_require__(/*! @/services/ai-classification.service */ "./src/services/ai-classification.service.ts");
 const ai_classification_dto_1 = __webpack_require__(/*! @/dtos/ai-classification.dto */ "./src/dtos/ai-classification.dto.ts");
+const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 let AiClassificationController = class AiClassificationController {
     constructor(aiClassificationService) {
         this.aiClassificationService = aiClassificationService;
@@ -349,7 +351,9 @@ __decorate([
 ], AiClassificationController.prototype, "remove", null);
 exports.AiClassificationController = AiClassificationController = __decorate([
     (0, common_1.Controller)('ai-classifications'),
+    (0, common_1.UseGuards)(auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
     (0, swagger_1.ApiTags)('AI Classifications'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     __metadata("design:paramtypes", [typeof (_a = typeof ai_classification_service_1.AiClassificationService !== "undefined" && ai_classification_service_1.AiClassificationService) === "function" ? _a : Object])
 ], AiClassificationController);
 
@@ -499,6 +503,9 @@ const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const markets_service_1 = __webpack_require__(/*! ../services/markets.service */ "./src/services/markets.service.ts");
 const create_market_dto_1 = __webpack_require__(/*! @/dtos/create-market.dto */ "./src/dtos/create-market.dto.ts");
 const update_market_dto_1 = __webpack_require__(/*! @/dtos/update-market.dto */ "./src/dtos/update-market.dto.ts");
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 let MarketsController = class MarketsController {
     constructor(marketsService) {
         this.marketsService = marketsService;
@@ -557,6 +564,9 @@ __decorate([
 ], MarketsController.prototype, "remove", null);
 exports.MarketsController = MarketsController = __decorate([
     (0, common_1.Controller)('markets'),
+    (0, swagger_1.ApiTags)('Markets'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.UseGuards)(auth_guard_1.JwtAuthGuard, admin_guard_1.AdminGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof markets_service_1.MarketsService !== "undefined" && markets_service_1.MarketsService) === "function" ? _a : Object])
 ], MarketsController);
 
@@ -582,7 +592,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OrdersController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -591,11 +601,12 @@ const orders_service_1 = __webpack_require__(/*! ../services/orders.service */ "
 const order_dto_1 = __webpack_require__(/*! ../dtos/order.dto */ "./src/dtos/order.dto.ts");
 const create_order_dto_1 = __webpack_require__(/*! ../dtos/create-order.dto */ "./src/dtos/create-order.dto.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 let OrdersController = class OrdersController {
     constructor(ordersService) {
         this.ordersService = ordersService;
     }
-    async createOrder(createOrderDto, req) {
+    async createOrder(createOrderDto) {
         const order = await this.ordersService.createOrder(createOrderDto);
         return {
             statusCode: common_1.HttpStatus.CREATED,
@@ -603,26 +614,30 @@ let OrdersController = class OrdersController {
             data: order
         };
     }
-    async getMyOrders(query, req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const orders = await this.ordersService.getMyOrders(userId, query);
+    async getMyOrders(query) {
+        const orders = await this.ordersService.getMyOrders(query);
         return {
             statusCode: common_1.HttpStatus.OK,
             message: 'Orders retrieved successfully',
             data: orders
         };
     }
-    async getOrderById(orderId, req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const order = await this.ordersService.getOrderById(userId, orderId);
+    async getOrderByIdAdmin(orderId) {
+        const order = await this.ordersService.getOrderByIdAdmin(orderId);
         return {
             statusCode: common_1.HttpStatus.OK,
             data: order
         };
     }
-    async getUnratedProducts(req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const products = await this.ordersService.getUnratedProducts(userId);
+    async getOrderById(orderId) {
+        const order = await this.ordersService.getOrderById(orderId);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            data: order
+        };
+    }
+    async getUnratedProducts() {
+        const products = await this.ordersService.getUnratedProducts();
         return {
             statusCode: common_1.HttpStatus.OK,
             message: products.length > 0
@@ -631,17 +646,20 @@ let OrdersController = class OrdersController {
             data: products
         };
     }
-    async getOrderStats(req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const stats = await this.ordersService.getOrderStats(userId);
+    async getOrderStats() {
+        const stats = await this.ordersService.getOrderStats();
         return {
             statusCode: common_1.HttpStatus.OK,
             data: stats
         };
     }
+    async delete(id) {
+        return this.ordersService.deleteOrder(id);
+    }
 };
 exports.OrdersController = OrdersController;
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     (0, swagger_1.ApiOperation)({
@@ -658,9 +676,8 @@ __decorate([
         description: 'Invalid bonus card, products not found, or validation error',
     }),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_b = typeof create_order_dto_1.CreateOrderDto !== "undefined" && create_order_dto_1.CreateOrderDto) === "function" ? _b : Object, Object]),
+    __metadata("design:paramtypes", [typeof (_b = typeof create_order_dto_1.CreateOrderDto !== "undefined" && create_order_dto_1.CreateOrderDto) === "function" ? _b : Object]),
     __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
 ], OrdersController.prototype, "createOrder", null);
 __decorate([
@@ -675,11 +692,35 @@ __decorate([
         type: [order_dto_1.MyOrdersResponseDto],
     }),
     __param(0, (0, common_1.Query)()),
-    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_d = typeof order_dto_1.GetMyOrdersQueryDto !== "undefined" && order_dto_1.GetMyOrdersQueryDto) === "function" ? _d : Object, Object]),
+    __metadata("design:paramtypes", [typeof (_d = typeof order_dto_1.GetMyOrdersQueryDto !== "undefined" && order_dto_1.GetMyOrdersQueryDto) === "function" ? _d : Object]),
     __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
 ], OrdersController.prototype, "getMyOrders", null);
+__decorate([
+    (0, common_1.Get)('admin/:orderId'),
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get order by ID (Admin)',
+        description: 'Retrieve detailed information about any order (Admin only)',
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'orderId',
+        description: 'UUID of the order',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Order details retrieved successfully',
+        type: order_dto_1.MyOrdersResponseDto,
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Order not found',
+    }),
+    __param(0, (0, common_1.Param)('orderId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], OrdersController.prototype, "getOrderByIdAdmin", null);
 __decorate([
     (0, common_1.Get)(':orderId'),
     (0, swagger_1.ApiOperation)({
@@ -701,10 +742,9 @@ __decorate([
         description: 'Order not found',
     }),
     __param(0, (0, common_1.Param)('orderId')),
-    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
 ], OrdersController.prototype, "getOrderById", null);
 __decorate([
     (0, common_1.Get)('my-orders/unrated'),
@@ -717,10 +757,9 @@ __decorate([
         description: 'Unrated products retrieved successfully',
         type: [order_dto_1.ProductInOrderDto],
     }),
-    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], OrdersController.prototype, "getUnratedProducts", null);
 __decorate([
     (0, common_1.Get)('my-orders/stats'),
@@ -745,11 +784,36 @@ __decorate([
             },
         },
     }),
-    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], OrdersController.prototype, "getOrderStats", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Delete order (Admin)',
+        description: 'Delete an order and all its related data (items, credits). Admin only.',
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'UUID of the order to delete',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Order deleted successfully',
+        type: order_dto_1.DeleteOrderResponseDto,
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: 'Order not found',
+    }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
+], OrdersController.prototype, "delete", null);
 exports.OrdersController = OrdersController = __decorate([
     (0, swagger_1.ApiTags)('orders'),
     (0, common_1.Controller)('orders'),
@@ -785,6 +849,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProductsController = void 0;
 const create_product_dto_1 = __webpack_require__(/*! @/dtos/create-product.dto */ "./src/dtos/create-product.dto.ts");
 const update_product_dto_1 = __webpack_require__(/*! @/dtos/update-product.dto */ "./src/dtos/update-product.dto.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const products_service_1 = __webpack_require__(/*! @/services/products.service */ "./src/services/products.service.ts");
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -814,6 +879,7 @@ let ProductsController = class ProductsController {
 };
 exports.ProductsController = ProductsController;
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -827,12 +893,14 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProductsController.prototype, "findTop", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __metadata("design:type", Function),
@@ -840,6 +908,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findOne", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Body)()),
@@ -848,6 +917,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "update", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __metadata("design:type", Function),
@@ -894,25 +964,21 @@ const rating_dto_1 = __webpack_require__(/*! ../dtos/rating.dto */ "./src/dtos/r
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const ai_classification_service_1 = __webpack_require__(/*! @/services/ai-classification.service */ "./src/services/ai-classification.service.ts");
 const update_rating_dto_1 = __webpack_require__(/*! @/dtos/update-rating.dto */ "./src/dtos/update-rating.dto.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 let RatingsController = class RatingsController {
     constructor(ratingsService, aiClassificationService) {
         this.ratingsService = ratingsService;
         this.aiClassificationService = aiClassificationService;
     }
-    async createRating(createRatingDto, req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const rating = await this.ratingsService.createRating(userId, createRatingDto);
-        if (createRatingDto.comment) {
-            const classification = await this.aiClassificationService.classifyComment(rating.id, createRatingDto.comment);
-        }
+    async createRating(createRatingDto) {
+        const rating = await this.ratingsService.createRating(createRatingDto);
         return {
             statusCode: common_1.HttpStatus.CREATED,
             message: `Rating submitted successfully! You earned ${rating.rewardPoints} bonus points ($${rating.rewardAmount.toFixed(2)})`,
             data: rating
         };
     }
-    async updateRating(ratingId, updateRatingDto, req) {
-        const userId = req.user?.id || 'mock-user-id';
+    async updateRating(ratingId, updateRatingDto) {
         const updatedRating = await this.ratingsService.updateRating(ratingId, updateRatingDto);
         return {
             statusCode: 200,
@@ -934,9 +1000,8 @@ let RatingsController = class RatingsController {
             data: stats
         };
     }
-    async getMyRatings(req) {
-        const userId = req.user?.id || 'mock-user-id';
-        const ratings = await this.ratingsService.getUserRatings(userId);
+    async getMyRatings() {
+        const ratings = await this.ratingsService.getUserRatings();
         return {
             statusCode: common_1.HttpStatus.OK,
             data: ratings
@@ -969,21 +1034,20 @@ __decorate([
         description: 'User has already rated this product',
     }),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_c = typeof rating_dto_1.CreateRatingDto !== "undefined" && rating_dto_1.CreateRatingDto) === "function" ? _c : Object, Object]),
+    __metadata("design:paramtypes", [typeof (_c = typeof rating_dto_1.CreateRatingDto !== "undefined" && rating_dto_1.CreateRatingDto) === "function" ? _c : Object]),
     __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
 ], RatingsController.prototype, "createRating", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
-    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_e = typeof update_rating_dto_1.UpdateRatingDto !== "undefined" && update_rating_dto_1.UpdateRatingDto) === "function" ? _e : Object, Object]),
+    __metadata("design:paramtypes", [String, typeof (_e = typeof update_rating_dto_1.UpdateRatingDto !== "undefined" && update_rating_dto_1.UpdateRatingDto) === "function" ? _e : Object]),
     __metadata("design:returntype", Promise)
 ], RatingsController.prototype, "updateRating", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)('product/:productId'),
     (0, swagger_1.ApiOperation)({
         summary: 'Get product ratings',
@@ -1005,6 +1069,7 @@ __decorate([
     __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
 ], RatingsController.prototype, "getProductRatings", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)('product/:productId/stats'),
     (0, swagger_1.ApiOperation)({
         summary: 'Get product rating statistics',
@@ -1040,9 +1105,8 @@ __decorate([
         description: 'List of user\'s ratings',
         type: [rating_dto_1.RatingResponseDto],
     }),
-    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], RatingsController.prototype, "getMyRatings", null);
 exports.RatingsController = RatingsController = __decorate([
@@ -1080,12 +1144,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersController = void 0;
 const create_user_dto_1 = __webpack_require__(/*! @/dtos/create-user.dto */ "./src/dtos/create-user.dto.ts");
 const update_user_dto_1 = __webpack_require__(/*! @/dtos/update-user.dto */ "./src/dtos/update-user.dto.ts");
+const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const users_service_1 = __webpack_require__(/*! @/services/users.service */ "./src/services/users.service.ts");
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const crypto_1 = __webpack_require__(/*! crypto */ "crypto");
-const uuid_1 = __webpack_require__(/*! uuid */ "uuid");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
@@ -1110,7 +1174,7 @@ let UsersController = class UsersController {
     }
     async findOne(id) {
         try {
-            return await this.usersService.findOne((0, uuid_1.v5)(id, uuid_1.v5.DNS));
+            return await this.usersService.findOne(id);
         }
         catch (error) {
             let errorMessage = {
@@ -1124,11 +1188,12 @@ let UsersController = class UsersController {
         return this.usersService.update(id, updateUserDto);
     }
     remove(id) {
-        return this.usersService.remove((0, uuid_1.v5)(id, uuid_1.v5.DNS));
+        return this.usersService.remove(id);
     }
 };
 exports.UsersController = UsersController;
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -1136,6 +1201,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "create", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
@@ -1148,6 +1214,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getMe", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -1155,7 +1222,10 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "findOne", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'User ID' }),
+    (0, swagger_1.ApiBody)({ type: update_user_dto_1.UpdateUserDto }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -1163,6 +1233,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -1531,44 +1602,97 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateProductDto = void 0;
 const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 class CreateProductDto {
 }
 exports.CreateProductDto = CreateProductDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        example: 'Organic Apple',
+        description: 'The name of the product',
+    }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MaxLength)(255),
     __metadata("design:type", String)
 ], CreateProductDto.prototype, "name", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 'Fresh organic apples from local farm',
+        description: 'Detailed description of the product',
+    }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateProductDto.prototype, "description", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 'APP-001',
+        description: 'Stock Keeping Unit',
+    }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateProductDto.prototype, "sku", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        example: true,
+        description: 'Whether users can rate this product',
+        default: true,
+    }),
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateProductDto.prototype, "allowedRating", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        example: 0.10,
+        description: 'Static reward amount in dollars for rating this product',
+        default: 0.00,
+    }),
+    (0, class_validator_1.IsNumber)({ maxDecimalPlaces: 2 }),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateProductDto.prototype, "rewardAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        example: 2.99,
+        description: 'Price of the product',
+    }),
     (0, class_validator_1.IsNumber)({ maxDecimalPlaces: 2 }),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateProductDto.prototype, "price", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: false,
+        description: 'Is this a Private Label product?',
+        default: false,
+    }),
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)
 ], CreateProductDto.prototype, "isPrivateLabel", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: true,
+        description: 'Is product active in catalog?',
+        default: true,
+    }),
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)
 ], CreateProductDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: false,
+        description: 'Is this a new product?',
+        default: false,
+    }),
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreateProductDto.prototype, "isNew", void 0);
 
 
 /***/ }),
@@ -1663,9 +1787,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GetMyOrdersQueryDto = exports.MyOrdersResponseDto = exports.ProductInOrderDto = void 0;
+exports.DeleteOrderResponseDto = exports.GetMyOrdersQueryDto = exports.MyOrdersResponseDto = exports.ProductInOrderDto = void 0;
 const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const class_transformer_1 = __webpack_require__(/*! class-transformer */ "class-transformer");
@@ -1712,6 +1836,14 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Has the user rated this product', example: false }),
     __metadata("design:type", Boolean)
 ], ProductInOrderDto.prototype, "hasUserRated", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Can this product be rated', example: true }),
+    __metadata("design:type", Boolean)
+], ProductInOrderDto.prototype, "rateable", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Standard reward amount for rating this product', example: 0.10 }),
+    __metadata("design:type", Number)
+], ProductInOrderDto.prototype, "rewardAmount", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: 'User\'s rating for this product if exists',
@@ -1769,6 +1901,21 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], GetMyOrdersQueryDto.prototype, "offset", void 0);
+class DeleteOrderResponseDto {
+}
+exports.DeleteOrderResponseDto = DeleteOrderResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Order ID', example: '550e8400-e29b-41d4-a716-446655440030' }),
+    __metadata("design:type", String)
+], DeleteOrderResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Status message', example: 'Order deleted successfully' }),
+    __metadata("design:type", String)
+], DeleteOrderResponseDto.prototype, "message", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Timestamp of deletion', example: '2024-12-20T15:30:00.000Z' }),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], DeleteOrderResponseDto.prototype, "deletedAt", void 0);
 
 
 /***/ }),
@@ -2084,16 +2231,33 @@ __decorate([
 /*!*************************************!*\
   !*** ./src/dtos/update-user.dto.ts ***!
   \*************************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateUserDto = void 0;
-const mapped_types_1 = __webpack_require__(/*! @nestjs/mapped-types */ "@nestjs/mapped-types");
-const create_user_dto_1 = __webpack_require__(/*! ./create-user.dto */ "./src/dtos/create-user.dto.ts");
-class UpdateUserDto extends (0, mapped_types_1.PartialType)(create_user_dto_1.CreateUserDto) {
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+const user_entity_1 = __webpack_require__(/*! @/entities/user.entity */ "./src/entities/user.entity.ts");
+class UpdateUserDto {
 }
 exports.UpdateUserDto = UpdateUserDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ enum: user_entity_1.Role }),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsEnum)(user_entity_1.Role),
+    __metadata("design:type", typeof (_a = typeof user_entity_1.Role !== "undefined" && user_entity_1.Role) === "function" ? _a : Object)
+], UpdateUserDto.prototype, "role", void 0);
 
 
 /***/ }),
@@ -2224,7 +2388,7 @@ __decorate([
     __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
 ], BonusCard.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.OneToOne)(() => user_entity_1.User, user => user.bonusCard),
+    (0, typeorm_1.OneToOne)(() => user_entity_1.User, user => user.bonusCard, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'userId' }),
     __metadata("design:type", typeof (_c = typeof user_entity_1.User !== "undefined" && user_entity_1.User) === "function" ? _c : Object)
 ], BonusCard.prototype, "user", void 0);
@@ -2277,8 +2441,8 @@ __decorate([
 ], OrderItem.prototype, "orderId", void 0);
 __decorate([
     (0, typeorm_1.Index)('idx_order_item_product'),
-    (0, typeorm_1.Column)({ type: 'uuid' }),
-    __metadata("design:type", String)
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", Object)
 ], OrderItem.prototype, "productId", void 0);
 __decorate([
     (0, typeorm_1.Column)({
@@ -2311,14 +2475,14 @@ __decorate([
     __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
 ], OrderItem.prototype, "createdAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => order_entity_1.Order, order => order.items),
+    (0, typeorm_1.ManyToOne)(() => order_entity_1.Order, order => order.items, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'orderId' }),
     __metadata("design:type", typeof (_b = typeof order_entity_1.Order !== "undefined" && order_entity_1.Order) === "function" ? _b : Object)
 ], OrderItem.prototype, "order", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => product_entity_1.Product, product => product.orderItems),
+    (0, typeorm_1.ManyToOne)(() => product_entity_1.Product, product => product.orderItems, { onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'productId' }),
-    __metadata("design:type", typeof (_c = typeof product_entity_1.Product !== "undefined" && product_entity_1.Product) === "function" ? _c : Object)
+    __metadata("design:type", Object)
 ], OrderItem.prototype, "product", void 0);
 exports.OrderItem = OrderItem = __decorate([
     (0, typeorm_1.Entity)('order_items'),
@@ -2400,7 +2564,7 @@ __decorate([
     __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
 ], Order.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.orders),
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.orders, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'userId' }),
     __metadata("design:type", typeof (_c = typeof user_entity_1.User !== "undefined" && user_entity_1.User) === "function" ? _c : Object)
 ], Order.prototype, "user", void 0);
@@ -2479,7 +2643,7 @@ __decorate([
         type: 'decimal',
         precision: 10,
         scale: 2,
-        comment: 'Allocated credit from 50% of bonus pool for this product'
+        comment: 'Static reward amount for this product'
     }),
     __metadata("design:type", Number)
 ], ProductCredit.prototype, "allocatedCredit", void 0);
@@ -2508,12 +2672,12 @@ __decorate([
     __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
 ], ProductCredit.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => order_entity_1.Order),
+    (0, typeorm_1.ManyToOne)(() => order_entity_1.Order, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'orderId' }),
     __metadata("design:type", typeof (_c = typeof order_entity_1.Order !== "undefined" && order_entity_1.Order) === "function" ? _c : Object)
 ], ProductCredit.prototype, "order", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => product_entity_1.Product),
+    (0, typeorm_1.ManyToOne)(() => product_entity_1.Product, { onDelete: "CASCADE" }),
     (0, typeorm_1.JoinColumn)({ name: 'productId' }),
     __metadata("design:type", typeof (_d = typeof product_entity_1.Product !== "undefined" && product_entity_1.Product) === "function" ? _d : Object)
 ], ProductCredit.prototype, "product", void 0);
@@ -2618,6 +2782,17 @@ __decorate([
 ], Product.prototype, "averageRating", void 0);
 __decorate([
     (0, typeorm_1.Column)({
+        type: 'decimal',
+        precision: 10,
+        scale: 2,
+        default: 0.00,
+        name: 'reward_amount',
+        comment: 'Static reward amount in dollars for rating this product'
+    }),
+    __metadata("design:type", Number)
+], Product.prototype, "rewardAmount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
         type: 'boolean',
         default: true,
         name: 'is_active',
@@ -2625,6 +2800,15 @@ __decorate([
     }),
     __metadata("design:type", Boolean)
 ], Product.prototype, "isActive", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'boolean',
+        default: false,
+        name: 'is_new',
+        comment: 'Whether the product is marked as new'
+    }),
+    __metadata("design:type", Boolean)
+], Product.prototype, "isNew", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
@@ -2847,12 +3031,12 @@ __decorate([
     __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
 ], RewardTransaction.prototype, "createdAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.rewardTransactions),
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, user => user.rewardTransactions, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'userId' }),
     __metadata("design:type", typeof (_b = typeof user_entity_1.User !== "undefined" && user_entity_1.User) === "function" ? _b : Object)
 ], RewardTransaction.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => rating_entity_1.Rating, { nullable: true }),
+    (0, typeorm_1.ManyToOne)(() => rating_entity_1.Rating, { nullable: true, onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'ratingId' }),
     __metadata("design:type", Object)
 ], RewardTransaction.prototype, "rating", void 0);
@@ -2986,13 +3170,18 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.User = void 0;
+exports.User = exports.Role = void 0;
 const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
 const bonus_card_entity_1 = __webpack_require__(/*! ./bonus-card.entity */ "./src/entities/bonus-card.entity.ts");
 const order_entity_1 = __webpack_require__(/*! ./order.entity */ "./src/entities/order.entity.ts");
 const rating_entity_1 = __webpack_require__(/*! ./rating.entity */ "./src/entities/rating.entity.ts");
 const reward_transaction_entity_1 = __webpack_require__(/*! ./reward-transaction.entity */ "./src/entities/reward-transaction.entity.ts");
 const bcyrpt = __importStar(__webpack_require__(/*! bcrypt */ "bcrypt"));
+var Role;
+(function (Role) {
+    Role["USER"] = "user";
+    Role["ADMIN"] = "admin";
+})(Role || (exports.Role = Role = {}));
 let User = class User {
     async hashPassword() {
         const salt = 10;
@@ -3045,6 +3234,14 @@ __decorate([
     __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
 ], User.prototype, "updatedAt", void 0);
 __decorate([
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: Role,
+        default: Role.USER,
+    }),
+    __metadata("design:type", String)
+], User.prototype, "role", void 0);
+__decorate([
     (0, typeorm_1.OneToOne)(() => bonus_card_entity_1.BonusCard, bonusCard => bonusCard.user),
     __metadata("design:type", typeof (_d = typeof bonus_card_entity_1.BonusCard !== "undefined" && bonus_card_entity_1.BonusCard) === "function" ? _d : Object)
 ], User.prototype, "bonusCard", void 0);
@@ -3069,6 +3266,49 @@ __decorate([
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);
+
+
+/***/ }),
+
+/***/ "./src/guards/admin.guard.ts":
+/*!***********************************!*\
+  !*** ./src/guards/admin.guard.ts ***!
+  \***********************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AdminGuard = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const nestjs_cls_1 = __webpack_require__(/*! nestjs-cls */ "nestjs-cls");
+const user_entity_1 = __webpack_require__(/*! ../entities/user.entity */ "./src/entities/user.entity.ts");
+let AdminGuard = class AdminGuard {
+    constructor(clsService) {
+        this.clsService = clsService;
+    }
+    canActivate(context) {
+        const user = this.clsService.get('user');
+        if (user?.role !== user_entity_1.Role.ADMIN) {
+            throw new common_1.ForbiddenException('Access denied. Admin role required.');
+        }
+        return true;
+    }
+};
+exports.AdminGuard = AdminGuard;
+exports.AdminGuard = AdminGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof nestjs_cls_1.ClsService !== "undefined" && nestjs_cls_1.ClsService) === "function" ? _a : Object])
+], AdminGuard);
 
 
 /***/ }),
@@ -3464,7 +3704,7 @@ let AiClassificationService = class AiClassificationService {
         this.aiClassificationRepo = aiClassificationRepo;
         this.ratingRepo = ratingRepo;
         this.configService = configService;
-        this.fastApiUrl = this.configService.get('FASTAPI_URL', 'http://localhost:8000');
+        this.fastApiUrl = this.configService.get('FASTAPI_URL', 'http://fastapi-api:8000');
     }
     async classifyComment(ratingId, comment) {
         const rating = await this.ratingRepo.findOne({ where: { id: ratingId } });
@@ -3943,9 +4183,6 @@ const bonus_card_entity_1 = __webpack_require__(/*! ../entities/bonus-card.entit
 const product_credit_entity_1 = __webpack_require__(/*! ../entities/product-credit.entity */ "./src/entities/product-credit.entity.ts");
 const nestjs_cls_1 = __webpack_require__(/*! nestjs-cls */ "nestjs-cls");
 const PURCHASE_CASHBACK_RATE = 0.02;
-const RATING_POOL_PERCENTAGE = 0.50;
-const PL_PRODUCT_POINTS = 30;
-const NORMAL_PRODUCT_POINTS = 10;
 let OrdersService = class OrdersService {
     constructor(ordersRepository, orderItemsRepository, ratingsRepository, productsRepository, usersRepository, bonusCardsRepository, productCreditsRepository, dataSource, clsService) {
         this.ordersRepository = ordersRepository;
@@ -3960,6 +4197,9 @@ let OrdersService = class OrdersService {
     }
     async createOrder(createOrderDto) {
         const { bonusCardNumber, items } = createOrderDto;
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -3968,9 +4208,12 @@ let OrdersService = class OrdersService {
                 where: { cardNumber: bonusCardNumber, isActive: true },
             });
             if (!bonusCard) {
-                throw new common_1.BadRequestException('Invalid bonus card or card does not belong to user');
+                throw new common_1.BadRequestException('Invalid bonus card');
             }
-            const userId = bonusCard.userId;
+            if (bonusCard.userId !== user.id) {
+                throw new common_1.ForbiddenException('Bonus card does not belong to user');
+            }
+            const userId = user.id;
             const productIds = items.map(item => item.productId);
             const products = await queryRunner.manager.find(product_entity_1.Product, {
                 where: {
@@ -4000,57 +4243,14 @@ let OrdersService = class OrdersService {
                 };
             });
             const bonusEarned = totalAmount * PURCHASE_CASHBACK_RATE;
-            const immediateCashback = bonusEarned * (1 - RATING_POOL_PERCENTAGE);
-            const ratingRewardPool = bonusEarned * RATING_POOL_PERCENTAGE;
             const order = queryRunner.manager.create(order_entity_1.Order, {
                 userId,
                 bonusCardNumber,
                 totalAmount,
                 marketId: createOrderDto.marketId,
-                bonusEarned: immediateCashback,
+                bonusEarned,
             });
             const savedOrder = await queryRunner.manager.save(order_entity_1.Order, order);
-            const rateableProducts = orderItemsData.filter(item => item.product.allowedRating);
-            const plProducts = rateableProducts.filter(item => item.product.isPrivateLabel);
-            const normalProducts = rateableProducts.filter(item => !item.product.isPrivateLabel);
-            const sortByRatingCount = (items) => {
-                return items.sort((a, b) => a.product.ratingCount - b.product.ratingCount);
-            };
-            const sortedPlProducts = sortByRatingCount([...plProducts]);
-            const sortedNormalProducts = sortByRatingCount([...normalProducts]);
-            const MAX_PRIORITY_PRODUCTS = 5;
-            const priorityPlProducts = sortedPlProducts.slice(0, MAX_PRIORITY_PRODUCTS);
-            const priorityNormalProducts = sortedNormalProducts.slice(0, MAX_PRIORITY_PRODUCTS);
-            const PL_POOL_RATIO = 0.70;
-            const NORMAL_POOL_RATIO = 0.30;
-            const plPoolAmount = ratingRewardPool * PL_POOL_RATIO;
-            const normalPoolAmount = ratingRewardPool * NORMAL_POOL_RATIO;
-            const calculateWeight = (ratingCount) => {
-                return 1 / (ratingCount + 1);
-            };
-            const totalPlWeight = priorityPlProducts.reduce((sum, item) => sum + calculateWeight(item.product.ratingCount), 0);
-            const totalNormalWeight = priorityNormalProducts.reduce((sum, item) => sum + calculateWeight(item.product.ratingCount), 0);
-            const productCreditMap = new Map();
-            if (priorityPlProducts.length > 0 && totalPlWeight > 0) {
-                priorityPlProducts.forEach(item => {
-                    const weight = calculateWeight(item.product.ratingCount);
-                    const allocatedCredit = plPoolAmount * (weight / totalPlWeight);
-                    productCreditMap.set(item.productId, {
-                        credit: allocatedCredit,
-                        points: PL_PRODUCT_POINTS
-                    });
-                });
-            }
-            if (priorityNormalProducts.length > 0 && totalNormalWeight > 0) {
-                priorityNormalProducts.forEach(item => {
-                    const weight = calculateWeight(item.product.ratingCount);
-                    const allocatedCredit = normalPoolAmount * (weight / totalNormalWeight);
-                    productCreditMap.set(item.productId, {
-                        credit: allocatedCredit,
-                        points: NORMAL_PRODUCT_POINTS
-                    });
-                });
-            }
             const savedItems = [];
             for (const itemData of orderItemsData) {
                 const orderItem = queryRunner.manager.create(order_item_entity_1.OrderItem, {
@@ -4065,25 +4265,26 @@ let OrdersService = class OrdersService {
                     ...saved,
                     product: itemData.product,
                 });
-                const creditInfo = productCreditMap.get(itemData.productId);
-                if (creditInfo) {
+                if (itemData.product.allowedRating && Number(itemData.product.rewardAmount) > 0) {
+                    const rewardAmount = Number(itemData.product.rewardAmount);
+                    const points = Math.round(rewardAmount / 0.001);
                     const productCredit = queryRunner.manager.create(product_credit_entity_1.ProductCredit, {
                         orderId: savedOrder.id,
                         productId: itemData.productId,
                         productPrice: itemData.totalPrice,
-                        allocatedCredit: Number(creditInfo.credit.toFixed(4)),
-                        ratingPoints: creditInfo.points,
+                        allocatedCredit: rewardAmount,
+                        ratingPoints: points,
                         isClaimed: false,
                     });
                     await queryRunner.manager.save(product_credit_entity_1.ProductCredit, productCredit);
                 }
             }
-            const user = await queryRunner.manager.findOne(user_entity_1.User, { where: { id: userId } });
-            if (!user) {
+            const userToUpdate = await queryRunner.manager.findOne(user_entity_1.User, { where: { id: userId } });
+            if (!userToUpdate) {
                 throw new common_1.NotFoundException('User not found');
             }
-            user.bonusBalance = Number(user.bonusBalance) + immediateCashback;
-            await queryRunner.manager.save(user_entity_1.User, user);
+            userToUpdate.bonusBalance = Number(userToUpdate.bonusBalance) + bonusEarned;
+            await queryRunner.manager.save(user_entity_1.User, userToUpdate);
             await queryRunner.commitTransaction();
             return {
                 orderId: savedOrder.id,
@@ -4099,6 +4300,7 @@ let OrdersService = class OrdersService {
                     totalPrice: item.totalPrice,
                     isPrivateLabel: item.product.isPrivateLabel,
                     allowedRating: item.product.allowedRating,
+                    rewardAmount: Number(item.product.rewardAmount),
                 })),
             };
         }
@@ -4110,11 +4312,12 @@ let OrdersService = class OrdersService {
             await queryRunner.release();
         }
     }
-    async getMyOrders(userId, query) {
+    async getMyOrders(query) {
         const { limit = 50, offset = 0 } = query;
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
         const orders = await this.ordersRepository
             .createQueryBuilder('order')
             .where('order.userId = :userId', { userId })
@@ -4122,6 +4325,35 @@ let OrdersService = class OrdersService {
             .skip(offset)
             .take(limit)
             .getMany();
+        return this.enrichOrders(orders, userId);
+    }
+    async getOrderById(orderId) {
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const order = await this.ordersRepository.findOne({
+            where: { id: orderId }
+        });
+        if (!order) {
+            throw new common_1.NotFoundException('Order not found');
+        }
+        if (order.userId !== user.id) {
+            throw new common_1.ForbiddenException('You do not have permission to access this order');
+        }
+        const [enrichedOrder] = await this.enrichOrders([order], user.id);
+        return enrichedOrder;
+    }
+    async getOrderByIdAdmin(orderId) {
+        const order = await this.ordersRepository.findOne({
+            where: { id: orderId }
+        });
+        if (!order) {
+            throw new common_1.NotFoundException('Order not found');
+        }
+        const [enrichedOrder] = await this.enrichOrders([order], order.userId);
+        return enrichedOrder;
+    }
+    async enrichOrders(orders, userId) {
         if (orders.length === 0) {
             return [];
         }
@@ -4133,7 +4365,7 @@ let OrdersService = class OrdersService {
             .orderBy('product.isPrivateLabel', 'DESC')
             .addOrderBy('product.ratingCount', 'DESC')
             .getMany();
-        const productIds = orderItems.map(item => item.productId);
+        const productIds = orderItems.map(item => item.productId).filter(id => !!id);
         const userRatings = productIds.length > 0
             ? await this.ratingsRepository.find({
                 where: {
@@ -4163,9 +4395,32 @@ let OrdersService = class OrdersService {
         return orders.map(order => {
             const items = orderItemsMap.get(order.id) || [];
             const products = items.map(item => {
-                const userRating = ratingMap.get(item.productId);
+                const userRating = item.productId ? ratingMap.get(item.productId) : undefined;
                 const creditKey = `${order.id}-${item.productId}`;
                 const productCredit = creditMap.get(creditKey);
+                if (!item.product) {
+                    return {
+                        id: item.productId || 'deleted',
+                        name: 'Deleted Product',
+                        description: 'This product is no longer available',
+                        price: Number(item.unitPrice),
+                        isPrivateLabel: false,
+                        ratingCount: 0,
+                        averageRating: 0,
+                        quantity: item.quantity,
+                        rateable: false,
+                        totalPrice: Number(item.totalPrice),
+                        hasUserRated: !!userRating,
+                        rewardAmount: 0,
+                        userRating: userRating ? {
+                            score: userRating.score,
+                            comment: userRating.comment,
+                            createdAt: userRating.createdAt,
+                            id: userRating.id
+                        } : undefined,
+                        rewardInfo: undefined
+                    };
+                }
                 return {
                     id: item.product.id,
                     name: item.product.name,
@@ -4178,6 +4433,7 @@ let OrdersService = class OrdersService {
                     rateable: item.product.allowedRating,
                     totalPrice: Number(item.totalPrice),
                     hasUserRated: !!userRating,
+                    rewardAmount: Number(item.product.rewardAmount),
                     userRating: userRating ? {
                         score: userRating.score,
                         comment: userRating.comment,
@@ -4201,32 +4457,16 @@ let OrdersService = class OrdersService {
             };
         });
     }
-    async getOrderById(userId, orderId) {
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
-        const order = await this.ordersRepository.findOne({
-            where: { id: orderId, userId }
-        });
-        if (!order) {
-            throw new common_1.NotFoundException('Order not found');
-        }
-        const orders = await this.getMyOrders(userId, { limit: 1, offset: 0 });
-        const targetOrder = orders.find(o => o.orderId === orderId);
-        if (!targetOrder) {
-            throw new common_1.NotFoundException('Order not found');
-        }
-        return targetOrder;
-    }
-    async getUnratedProducts(userId) {
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
-        const orders = await this.getMyOrders(userId, {});
+    async getUnratedProducts() {
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
+        const orders = await this.getMyOrders({});
         const unratedProducts = [];
         orders.forEach(order => {
             order.products.forEach(product => {
-                if (!product.hasUserRated) {
+                if (!product.hasUserRated && product.rateable) {
                     unratedProducts.push(product);
                 }
             });
@@ -4239,10 +4479,11 @@ let OrdersService = class OrdersService {
             return b.ratingCount - a.ratingCount;
         });
     }
-    async getOrderStats(userId) {
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
+    async getOrderStats() {
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
         const stats = await this.ordersRepository
             .createQueryBuilder('order')
             .select('COUNT(*)', 'totalOrders')
@@ -4254,6 +4495,18 @@ let OrdersService = class OrdersService {
             totalOrders: parseInt(stats.totalOrders) || 0,
             totalSpent: parseFloat(stats.totalSpent) || 0,
             totalBonusEarned: parseFloat(stats.totalBonusEarned) || 0
+        };
+    }
+    async deleteOrder(id) {
+        const order = await this.ordersRepository.findOne({ where: { id } });
+        if (!order) {
+            throw new common_1.NotFoundException(`Order with ID ${id} not found`);
+        }
+        await this.ordersRepository.remove(order);
+        return {
+            id,
+            message: 'Order deleted successfully',
+            deletedAt: new Date(),
         };
     }
 };
@@ -4370,6 +4623,10 @@ let ProductsService = class ProductsService {
     async remove(id) {
         const product = await this.findOne(id);
         await this.productRepository.remove(product);
+        return {
+            message: 'Product deleted successfully',
+            product
+        };
     }
 };
 exports.ProductsService = ProductsService;
@@ -4433,11 +4690,12 @@ let RatingsService = class RatingsService {
         this.clsService = clsService;
         this.aiClassificationService = aiClassificationService;
     }
-    async createRating(userId, createRatingDto) {
+    async createRating(createRatingDto) {
         const { productId, score, comment } = createRatingDto;
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -4481,14 +4739,6 @@ let RatingsService = class RatingsService {
                 rewardAmount: Number(rewardAmount)
             });
             const savedRating = await queryRunner.manager.save(rating_entity_1.Rating, rating);
-            if (comment && comment.trim().length > 0) {
-                try {
-                    await this.aiClassificationService.classifyComment(savedRating.id, comment);
-                }
-                catch (classificationError) {
-                    console.error('AI Classification failed:', classificationError);
-                }
-            }
             creditToUse.isClaimed = true;
             await queryRunner.manager.save(product_credit_entity_1.ProductCredit, creditToUse);
             await this.updateProductRatingStats(productId, queryRunner.manager);
@@ -4510,6 +4760,14 @@ let RatingsService = class RatingsService {
             });
             await queryRunner.manager.save(reward_transaction_entity_1.RewardTransaction, transaction);
             await queryRunner.commitTransaction();
+            if (comment && comment.trim().length > 0) {
+                try {
+                    await this.aiClassificationService.classifyComment(savedRating.id, comment);
+                }
+                catch (classificationError) {
+                    console.error('AI Classification failed:', classificationError);
+                }
+            }
             return {
                 id: savedRating.id,
                 productId: product.id,
@@ -4538,8 +4796,6 @@ let RatingsService = class RatingsService {
         if (!rating) {
             throw new common_1.NotFoundException('Rating not found');
         }
-        console.log(rating.userId);
-        console.log(userId);
         if (rating.userId !== userId) {
             throw new common_1.ForbiddenException('You can only update your own ratings');
         }
@@ -4578,9 +4834,6 @@ let RatingsService = class RatingsService {
         }
     }
     async verifyUserPurchase(userId, productId, manager) {
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
         const orderItem = await manager
             .createQueryBuilder(order_item_entity_1.OrderItem, 'orderItem')
             .innerJoin('orderItem.order', 'order')
@@ -4655,10 +4908,11 @@ let RatingsService = class RatingsService {
             topTopics: topTopics.slice(0, 5)
         };
     }
-    async getUserRatings(userId) {
-        const testUserId = this.clsService.get('user');
-        if (testUserId.id)
-            userId = testUserId.id;
+    async getUserRatings() {
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
         const ratings = await this.ratingsRepository.find({
             where: { userId },
             relations: ['product', 'aiClassifications'],
@@ -4703,45 +4957,12 @@ exports.RatingsService = RatingsService = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -4755,7 +4976,6 @@ const user_entity_1 = __webpack_require__(/*! @/entities/user.entity */ "./src/e
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
 const typeorm_2 = __webpack_require__(/*! typeorm */ "typeorm");
-const bcrypt = __importStar(__webpack_require__(/*! bcrypt */ "bcrypt"));
 const nestjs_cls_1 = __webpack_require__(/*! nestjs-cls */ "nestjs-cls");
 let UsersService = class UsersService {
     constructor(userRepo, clsService) {
@@ -4805,10 +5025,6 @@ let UsersService = class UsersService {
     }
     async update(id, updateUserDto) {
         const user = await this.findOne(id);
-        if (updateUserDto.password) {
-            const saltRounds = 10;
-            updateUserDto.password = await bcrypt.hash(updateUserDto.password, saltRounds);
-        }
         Object.assign(user, updateUserDto);
         await this.userRepo.save(user);
         return user;
@@ -4956,16 +5172,6 @@ module.exports = require("nestjs-cls");
 /***/ ((module) => {
 
 module.exports = require("typeorm");
-
-/***/ }),
-
-/***/ "uuid":
-/*!***********************!*\
-  !*** external "uuid" ***!
-  \***********************/
-/***/ ((module) => {
-
-module.exports = require("uuid");
 
 /***/ }),
 

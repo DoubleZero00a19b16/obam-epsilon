@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Order } from '../entities/order.entity';
@@ -15,12 +15,7 @@ import { ClsService } from 'nestjs-cls';
 // 2% cashback on purchases
 const PURCHASE_CASHBACK_RATE = 0.02;
 
-// 50% of bonus goes to rating reward pool
-const RATING_POOL_PERCENTAGE = 0.50;
 
-// Points per rating
-const PL_PRODUCT_POINTS = 30;
-const NORMAL_PRODUCT_POINTS = 10;
 
 @Injectable()
 export class OrdersService {
@@ -41,7 +36,7 @@ export class OrdersService {
     private productCreditsRepository: Repository<ProductCredit>,
     private dataSource: DataSource,
     private clsService: ClsService
-  ) {}
+  ) { }
 
   /**
    * Create a new order with products
@@ -150,7 +145,7 @@ export class OrdersService {
   //     // Allocate 70% of pool to PL products, 30% to normal products
   //     const PL_POOL_RATIO = 0.70;
   //     const NORMAL_POOL_RATIO = 0.30;
-      
+
   //     const plPoolAmount = ratingRewardPool * PL_POOL_RATIO;
   //     const normalPoolAmount = ratingRewardPool * NORMAL_POOL_RATIO;
 
@@ -206,7 +201,7 @@ export class OrdersService {
 
   //     // Create order items and allocate credits
   //     const savedItems: Array<OrderItem & { product: Product }> = [];
-      
+
   //     for (const itemData of orderItemsData) {
   //       const orderItem = queryRunner.manager.create(OrderItem, {
   //         orderId: savedOrder.id,
@@ -224,7 +219,7 @@ export class OrdersService {
 
   //       // Check if this product has allocated credit
   //       const creditInfo = productCreditMap.get(itemData.productId);
-        
+
   //       if (creditInfo) {
   //         // This product is in top 4-5 priority - create credit record
   //         const productCredit = queryRunner.manager.create(ProductCredit, {
@@ -280,6 +275,9 @@ export class OrdersService {
   async createOrder(createOrderDto: CreateOrderDto): Promise<OrderCreatedResponseDto> {
     const { bonusCardNumber, items } = createOrderDto;
 
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+
     // Use transaction for atomicity
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -291,19 +289,22 @@ export class OrdersService {
         where: { cardNumber: bonusCardNumber, isActive: true },
       });
 
-      
       if (!bonusCard) {
-        throw new BadRequestException('Invalid bonus card or card does not belong to user');
+        throw new BadRequestException('Invalid bonus card');
       }
 
-      const userId = bonusCard.userId
+      if (bonusCard.userId !== user.id) {
+        throw new ForbiddenException('Bonus card does not belong to user');
+      }
+
+      const userId = user.id;
 
       // 2. Verify all products exist and get their prices
       const productIds = items.map(item => item.productId);
       const products = await queryRunner.manager.find(Product, {
-        where: { 
+        where: {
           id: In(productIds),
-          isActive: true 
+          isActive: true
         }
       });
 
@@ -335,12 +336,8 @@ export class OrdersService {
         };
       });
 
-      // Calculate 5% cashback
+      // Calculate 2% cashback on purchase
       const bonusEarned = totalAmount * PURCHASE_CASHBACK_RATE;
-
-      // Split bonus: 50% immediate cashback, 50% to rating reward pool
-      const immediateCashback = bonusEarned * (1 - RATING_POOL_PERCENTAGE);
-      const ratingRewardPool = bonusEarned * RATING_POOL_PERCENTAGE;
 
       // 4. Create order
       const order = queryRunner.manager.create(Order, {
@@ -348,88 +345,14 @@ export class OrdersService {
         bonusCardNumber,
         totalAmount,
         marketId: createOrderDto.marketId,
-        bonusEarned: immediateCashback, // Only immediate cashback shown
+        bonusEarned,
       });
 
       const savedOrder = await queryRunner.manager.save(Order, order);
 
-      // 5. Calculate priority-based credit allocation
-      // IMPORTANT: Only distribute credits to products with allowedRating = true
-      const rateableProducts = orderItemsData.filter(item => item.product.allowedRating);
-      
-      // Separate PL and normal products (that are rateable)
-      const plProducts = rateableProducts.filter(item => item.product.isPrivateLabel);
-      const normalProducts = rateableProducts.filter(item => !item.product.isPrivateLabel);
-
-      // Sort by rating count (ascending - fewer ratings first)
-      const sortByRatingCount = (items: typeof orderItemsData) => {
-        return items.sort((a, b) => a.product.ratingCount - b.product.ratingCount);
-      };
-
-      const sortedPlProducts = sortByRatingCount([...plProducts]);
-      const sortedNormalProducts = sortByRatingCount([...normalProducts]);
-
-      // Take only top 4-5 products with lowest ratings from each category
-      const MAX_PRIORITY_PRODUCTS = 5;
-      const priorityPlProducts = sortedPlProducts.slice(0, MAX_PRIORITY_PRODUCTS);
-      const priorityNormalProducts = sortedNormalProducts.slice(0, MAX_PRIORITY_PRODUCTS);
-
-      // Allocate 70% of pool to PL products, 30% to normal products
-      const PL_POOL_RATIO = 0.70;
-      const NORMAL_POOL_RATIO = 0.30;
-      
-      const plPoolAmount = ratingRewardPool * PL_POOL_RATIO;
-      const normalPoolAmount = ratingRewardPool * NORMAL_POOL_RATIO;
-
-      // Calculate weights (inverse of rating count - fewer ratings = higher weight)
-      const calculateWeight = (ratingCount: number) => {
-        // Weight formula: 1 / (ratingCount + 1)
-        // Products with 0 ratings get weight of 1.0
-        // Products with 10 ratings get weight of 0.09
-        // Products with 100 ratings get weight of 0.01
-        return 1 / (ratingCount + 1);
-      };
-
-      // Calculate total weights for priority products
-      const totalPlWeight = priorityPlProducts.reduce(
-        (sum, item) => sum + calculateWeight(item.product.ratingCount), 
-        0
-      );
-      const totalNormalWeight = priorityNormalProducts.reduce(
-        (sum, item) => sum + calculateWeight(item.product.ratingCount), 
-        0
-      );
-
-      // Create map of product credits
-      const productCreditMap = new Map<string, { credit: number; points: number }>();
-
-      // Allocate credits to priority PL products
-      if (priorityPlProducts.length > 0 && totalPlWeight > 0) {
-        priorityPlProducts.forEach(item => {
-          const weight = calculateWeight(item.product.ratingCount);
-          const allocatedCredit = plPoolAmount * (weight / totalPlWeight);
-          productCreditMap.set(item.productId, {
-            credit: allocatedCredit,
-            points: PL_PRODUCT_POINTS
-          });
-        });
-      }
-
-      // Allocate credits to priority normal products
-      if (priorityNormalProducts.length > 0 && totalNormalWeight > 0) {
-        priorityNormalProducts.forEach(item => {
-          const weight = calculateWeight(item.product.ratingCount);
-          const allocatedCredit = normalPoolAmount * (weight / totalNormalWeight);
-          productCreditMap.set(item.productId, {
-            credit: allocatedCredit,
-            points: NORMAL_PRODUCT_POINTS
-          });
-        });
-      }
-
-      // Create order items and allocate credits
+      // 5. Create order items and allocate STATIC CREDIT
       const savedItems: Array<OrderItem & { product: Product }> = [];
-      
+
       for (const itemData of orderItemsData) {
         const orderItem = queryRunner.manager.create(OrderItem, {
           orderId: savedOrder.id,
@@ -445,33 +368,36 @@ export class OrdersService {
           product: itemData.product,
         });
 
-        // Check if this product has allocated credit
-        const creditInfo = productCreditMap.get(itemData.productId);
-        
-        if (creditInfo) {
-          // This product is in top 4-5 priority AND has allowedRating=true - create credit record
+        // Check if this product has a static reward amount
+        // AND if rating is allowed for this product
+        if (itemData.product.allowedRating && Number(itemData.product.rewardAmount) > 0) {
+          const rewardAmount = Number(itemData.product.rewardAmount);
+
+          // Calculate points: 10 points = $0.01 => 1 point = $0.001
+          // Points = Amount / 0.001
+          const points = Math.round(rewardAmount / 0.001);
+
           const productCredit = queryRunner.manager.create(ProductCredit, {
             orderId: savedOrder.id,
             productId: itemData.productId,
             productPrice: itemData.totalPrice,
-            allocatedCredit: Number(creditInfo.credit.toFixed(4)),
-            ratingPoints: creditInfo.points,
+            allocatedCredit: rewardAmount,
+            ratingPoints: points,
             isClaimed: false,
           });
 
           await queryRunner.manager.save(ProductCredit, productCredit);
         }
-        // Products not in top 4-5 OR products with allowedRating=false get no credit record (cannot be rated for rewards)
       }
 
       // 6. Update user bonus balance (only immediate cashback)
-      const user = await queryRunner.manager.findOne(User, { where: { id: userId } });
-      if (!user) {
+      const userToUpdate = await queryRunner.manager.findOne(User, { where: { id: userId } });
+      if (!userToUpdate) {
         throw new NotFoundException('User not found');
       }
 
-      user.bonusBalance = Number(user.bonusBalance) + immediateCashback;
-      await queryRunner.manager.save(User, user);
+      userToUpdate.bonusBalance = Number(userToUpdate.bonusBalance) + bonusEarned;
+      await queryRunner.manager.save(User, userToUpdate);
 
       // Commit transaction
       await queryRunner.commitTransaction();
@@ -491,6 +417,7 @@ export class OrdersService {
           totalPrice: item.totalPrice,
           isPrivateLabel: item.product.isPrivateLabel,
           allowedRating: item.product.allowedRating, // Frontend can check if product is rateable
+          rewardAmount: Number(item.product.rewardAmount),
         })),
       };
 
@@ -507,11 +434,12 @@ export class OrdersService {
    * Get user's order history with products sorted by PL status and rating count
    * Simplified - no status filter needed
    */
-  async getMyOrders(userId: string, query: GetMyOrdersQueryDto): Promise<MyOrdersResponseDto[]> {
+  async getMyOrders(query: GetMyOrdersQueryDto): Promise<MyOrdersResponseDto[]> {
     const { limit = 50, offset = 0 } = query;
 
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
 
     // Get all orders for the user
     const orders = await this.ordersRepository
@@ -522,13 +450,56 @@ export class OrdersService {
       .take(limit)
       .getMany();
 
+    return this.enrichOrders(orders, userId);
+  }
+
+  /**
+   * Get a single order by ID (User safe)
+   */
+  async getOrderById(orderId: string): Promise<MyOrdersResponseDto> {
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId }
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.userId !== user.id) {
+      throw new ForbiddenException('You do not have permission to access this order');
+    }
+
+    const [enrichedOrder] = await this.enrichOrders([order], user.id);
+    return enrichedOrder;
+  }
+
+  /**
+   * Get a single order by ID (Admin)
+   */
+  async getOrderByIdAdmin(orderId: string): Promise<MyOrdersResponseDto> {
+    const order = await this.ordersRepository.findOne({
+      where: { id: orderId }
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const [enrichedOrder] = await this.enrichOrders([order], order.userId);
+    return enrichedOrder;
+  }
+
+  private async enrichOrders(orders: Order[], userId: string): Promise<MyOrdersResponseDto[]> {
     if (orders.length === 0) {
       return [];
     }
 
     // Get all order items with products, using the composite index for efficient sorting
     const orderIds = orders.map(order => order.id);
-    
+
     const orderItems = await this.orderItemsRepository
       .createQueryBuilder('orderItem')
       .leftJoinAndSelect('orderItem.product', 'product')
@@ -538,14 +509,14 @@ export class OrdersService {
       .getMany();
 
     // Get user's ratings for these products
-    const productIds = orderItems.map(item => item.productId);
-    const userRatings = productIds.length > 0 
+    const productIds = orderItems.map(item => item.productId).filter(id => !!id);
+    const userRatings = productIds.length > 0
       ? await this.ratingsRepository.find({
-          where: {
-            userId,
-            productId: In(productIds)
-          }
-        })
+        where: {
+          userId,
+          productId: In(productIds)
+        }
+      })
       : [];
 
     // Get product credits for these products from user's orders
@@ -564,7 +535,7 @@ export class OrdersService {
     // Create a map for product credits (keyed by orderId-productId)
     const creditMap = new Map(
       productCredits.map(credit => [
-        `${credit.orderId}-${credit.productId}`, 
+        `${credit.orderId}-${credit.productId}`,
         credit
       ])
     );
@@ -581,12 +552,36 @@ export class OrdersService {
     // Build response with sorted products
     return orders.map(order => {
       const items = orderItemsMap.get(order.id) || [];
-      
+
       const products: ProductInOrderDto[] = items.map(item => {
-        const userRating = ratingMap.get(item.productId);
+        const userRating = item.productId ? ratingMap.get(item.productId) : undefined;
         const creditKey = `${order.id}-${item.productId}`;
         const productCredit = creditMap.get(creditKey);
-        
+
+        if (!item.product) {
+          return {
+            id: item.productId || 'deleted',
+            name: 'Deleted Product',
+            description: 'This product is no longer available',
+            price: Number(item.unitPrice),
+            isPrivateLabel: false,
+            ratingCount: 0,
+            averageRating: 0,
+            quantity: item.quantity,
+            rateable: false,
+            totalPrice: Number(item.totalPrice),
+            hasUserRated: !!userRating,
+            rewardAmount: 0,
+            userRating: userRating ? {
+              score: userRating.score,
+              comment: userRating.comment,
+              createdAt: userRating.createdAt,
+              id: userRating.id
+            } : undefined,
+            rewardInfo: undefined
+          };
+        }
+
         return {
           id: item.product.id,
           name: item.product.name,
@@ -599,6 +594,7 @@ export class OrdersService {
           rateable: item.product.allowedRating,
           totalPrice: Number(item.totalPrice),
           hasUserRated: !!userRating,
+          rewardAmount: Number(item.product.rewardAmount),
           userRating: userRating ? {
             score: userRating.score,
             comment: userRating.comment,
@@ -625,48 +621,23 @@ export class OrdersService {
   }
 
   /**
-   * Get a single order by ID
-   */
-  async getOrderById(userId: string, orderId: string): Promise<MyOrdersResponseDto> {
-
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
-
-    const order = await this.ordersRepository.findOne({
-      where: { id: orderId, userId }
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    const orders = await this.getMyOrders(userId, { limit: 1, offset: 0 });
-    const targetOrder = orders.find(o => o.orderId === orderId);
-
-    if (!targetOrder) {
-      throw new NotFoundException('Order not found');
-    }
-
-    return targetOrder;
-  }
-
-  /**
    * Get products from user's orders that haven't been rated yet
    */
-  async getUnratedProducts(userId: string): Promise<ProductInOrderDto[]> {
+  async getUnratedProducts(): Promise<ProductInOrderDto[]> {
 
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
 
     // Get all completed orders
-    const orders = await this.getMyOrders(userId, {});
+    const orders = await this.getMyOrders({});
 
     // Flatten and filter to only unrated products
     const unratedProducts: ProductInOrderDto[] = [];
-    
+
     orders.forEach(order => {
       order.products.forEach(product => {
-        if (!product.hasUserRated) {
+        if (!product.hasUserRated && product.rateable) {
           unratedProducts.push(product);
         }
       });
@@ -689,10 +660,11 @@ export class OrdersService {
   /**
    * Get order statistics for a user
    */
-  async getOrderStats(userId: string) {
+  async getOrderStats() {
 
-    const testUserId = this.clsService.get<User>('user');
-    if (testUserId.id) userId = testUserId.id;
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
 
     const stats = await this.ordersRepository
       .createQueryBuilder('order')
@@ -706,6 +678,26 @@ export class OrdersService {
       totalOrders: parseInt(stats.totalOrders) || 0,
       totalSpent: parseFloat(stats.totalSpent) || 0,
       totalBonusEarned: parseFloat(stats.totalBonusEarned) || 0
+    };
+  }
+
+  /**
+   * Delete an order and all its related items (Admin only)
+   * Cascades handle OrderItem and ProductCredit cleanup
+   */
+  async deleteOrder(id: string): Promise<{ id: string; message: string; deletedAt: Date }> {
+    const order = await this.ordersRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    await this.ordersRepository.remove(order);
+
+    return {
+      id,
+      message: 'Order deleted successfully',
+      deletedAt: new Date(),
     };
   }
 }

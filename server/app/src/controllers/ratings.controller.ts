@@ -5,6 +5,7 @@ import { CreateRatingDto, RatingResponseDto, ProductRatingStatsDto } from '../dt
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AiClassificationService } from '@/services/ai-classification.service';
 import { UpdateRatingDto } from '@/dtos/update-rating.dto';
+import { AdminGuard } from '@/guards/admin.guard';
 
 /**
  * Controller for product rating operations
@@ -18,16 +19,16 @@ export class RatingsController {
   constructor(
     private readonly ratingsService: RatingsService,
     private readonly aiClassificationService: AiClassificationService
-  ) {}
+  ) { }
 
   /**
    * POST /ratings
    * Submit a new product rating
    * Automatically calculates and awards bonus points based on product type
-   */
+  */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Submit a product rating',
     description: 'Rate a product you have purchased. Earn 30 points for PL products or 10 points for normal products. Comment is always optional.',
   })
@@ -50,20 +51,12 @@ export class RatingsController {
   })
   async createRating(
     @Body() createRatingDto: CreateRatingDto,
-    @Req() req: any, // Replace with proper user type from auth guard
   ): Promise<{
     statusCode: number;
     message: string;
     data: RatingResponseDto;
   }> {
-    // In production, extract userId from authenticated request
-    const userId = req.user?.id || 'mock-user-id'; // Mock for development
-    
-    const rating = await this.ratingsService.createRating(userId, createRatingDto);
-
-    if (createRatingDto.comment) {
-      const classification = await this.aiClassificationService.classifyComment(rating.id, createRatingDto.comment);
-    }
+    const rating = await this.ratingsService.createRating(createRatingDto);
 
     return {
       statusCode: HttpStatus.CREATED,
@@ -73,30 +66,29 @@ export class RatingsController {
   }
 
   // PUT /api/v1/ratings/:id
-@Put(':id')
-async updateRating(
-  @Param('id') ratingId: string,
-  @Body() updateRatingDto: UpdateRatingDto,
-  @Req() req: any,
-) {
-  const userId = req.user?.id || 'mock-user-id';
-  const updatedRating = await this.ratingsService.updateRating(
-    ratingId,
-    updateRatingDto
-  );
-  return {
-    statusCode: 200,
-    message: 'Rating updated successfully',
-    data: updatedRating
-  };
-}
+  @Put(':id')
+  async updateRating(
+    @Param('id') ratingId: string,
+    @Body() updateRatingDto: UpdateRatingDto,
+  ) {
+    const updatedRating = await this.ratingsService.updateRating(
+      ratingId,
+      updateRatingDto
+    );
+    return {
+      statusCode: 200,
+      message: 'Rating updated successfully',
+      data: updatedRating
+    };
+  }
 
   /**
    * GET /ratings/product/:productId
    * Get all ratings for a specific product
    */
+  @UseGuards(AdminGuard)
   @Get('product/:productId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get product ratings',
     description: 'Retrieve all ratings and reviews for a specific product',
   })
@@ -127,9 +119,10 @@ async updateRating(
   /**
    * GET /ratings/product/:productId/stats
    * Get rating statistics for a product (average, count, distribution)
-   */
+  */
+  @UseGuards(AdminGuard)
   @Get('product/:productId/stats')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get product rating statistics',
     description: 'Get aggregated rating data including average, total count, and distribution by star level',
   })
@@ -164,9 +157,9 @@ async updateRating(
   /**
    * GET /ratings/my-ratings
    * Get all ratings submitted by the authenticated user
-   */
+  */
   @Get('my-ratings')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get my ratings',
     description: 'Retrieve all ratings submitted by the authenticated user',
   })
@@ -175,14 +168,11 @@ async updateRating(
     description: 'List of user\'s ratings',
     type: [RatingResponseDto],
   })
-  async getMyRatings(
-    @Req() req: any,
-  ): Promise<{
+  async getMyRatings(): Promise<{
     statusCode: number;
     data: RatingResponseDto[];
   }> {
-    const userId = req.user?.id || 'mock-user-id';
-    const ratings = await this.ratingsService.getUserRatings(userId);
+    const ratings = await this.ratingsService.getUserRatings();
 
     return {
       statusCode: HttpStatus.OK,

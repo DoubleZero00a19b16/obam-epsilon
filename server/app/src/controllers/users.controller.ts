@@ -1,9 +1,10 @@
 import { CreateUserDto } from '@/dtos/create-user.dto';
 import { UpdateUserDto } from '@/dtos/update-user.dto';
+import { AdminGuard } from '@/guards/admin.guard';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { UsersService } from '@/services/users.service';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { v5 as uuidv5 } from "uuid"
 
@@ -14,8 +15,9 @@ import { v5 as uuidv5 } from "uuid"
 export class UsersController {
   constructor(
     private readonly usersService: UsersService
-  ) {}
-
+  ) { }
+  
+  @UseGuards(AdminGuard)
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     try {
@@ -28,21 +30,23 @@ export class UsersController {
       return errorMessage;
     }
   }
-
+  
+  @UseGuards(AdminGuard)
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
-
+  
   @Get('/me')
   getMe() {
     return this.usersService.getMe();
   }
-
+  
+  @UseGuards(AdminGuard)
   @Get(':id')
   async findOne(@Param('id') id: string) {
     try {
-      return await this.usersService.findOne(uuidv5(id, uuidv5.DNS));
+      return await this.usersService.findOne(id);
     } catch (error) {
       let errorMessage = {
         statusCode: 404,
@@ -52,13 +56,17 @@ export class UsersController {
     }
   }
 
+  @UseGuards(AdminGuard)
   @Patch(':id')
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ type: UpdateUserDto })
   update(@Param('id') id: UUID, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
-
+  
+  @UseGuards(AdminGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.usersService.remove(uuidv5(id, uuidv5.DNS));
+    return this.usersService.remove(id);
   }
 }
