@@ -8,6 +8,20 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #004D3B;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
     <script>
         tailwind.config = {
             theme: {
@@ -24,11 +38,39 @@
     </script>
 </head>
 <body class="bg-gray-50 min-h-screen">
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
+            <div class="loader mb-4"></div>
+            <p class="text-gray-700 font-semibold" id="loadingMessage">Loading...</p>
+        </div>
+    </div>
     <div id="app" class="max-w-6xl mx-auto p-6">
         <!-- Header -->
         <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h1 class="text-3xl font-bold text-gray-900 mb-2">🛒 OBA Order Creator</h1>
             <p class="text-gray-600">Admin tool to create orders for users</p>
+        </div>
+
+        <!-- Login Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">🔐 Login</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="text" id="loginPhone" placeholder="+99450XXXXXXX" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+                <div>
+                    <button onclick="login()" id="loginBtn" class="w-full bg-brand-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                        Sign In
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- API Config -->
@@ -37,7 +79,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">API Base URL</label>
-                    <input type="text" id="apiUrl" value="http://localhost:3000/api/v1" 
+                    <input type="text" id="apiUrl" value="http://16.171.0.209:3000/api/v1" 
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
                 </div>
                 <div>
@@ -67,6 +109,8 @@
             <!-- User/Card List -->
             <div id="userList" class="mt-4 hidden">
                 <h3 class="font-semibold mb-2">Available Bonus Cards:</h3>
+                <input type="text" id="userSearch" oninput="renderUsers()" placeholder="🔍 Search Users..." 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-brand-green focus:border-transparent">
                 <div id="userListContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto"></div>
             </div>
         </div>
@@ -90,6 +134,8 @@
             <!-- Market List -->
             <div id="marketList" class="mt-4 hidden">
                 <h3 class="font-semibold mb-2">Available Markets:</h3>
+                <input type="text" id="marketSearch" oninput="renderMarkets()" placeholder="🔍 Search Markets..." 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-brand-green focus:border-transparent">
                 <div id="marketListContent" class="grid grid-cols-1 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto"></div>
             </div>
         </div>
@@ -111,6 +157,8 @@
             <!-- Available Products -->
             <div id="productCatalog" class="mb-6 hidden">
                 <h3 class="font-semibold mb-3">📋 Available Products (Click to Add):</h3>
+                <input type="text" id="productSearch" oninput="renderProducts()" placeholder="🔍 Search Products..." 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-brand-green focus:border-transparent">
                 <div id="productCatalogContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto"></div>
             </div>
 
@@ -158,6 +206,13 @@
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
                 </div>
 
+                <!-- Reward Amount -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reward Amount (₼) *</label>
+                    <input type="number" id="productRewardAmount" placeholder="0.50" step="0.01" min="0"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-green focus:border-transparent">
+                </div>
+
                 <!-- Checkboxes -->
                 <div class="space-y-2">
                     <label class="flex items-center space-x-2 cursor-pointer">
@@ -167,6 +222,10 @@
                     <label class="flex items-center space-x-2 cursor-pointer">
                         <input type="checkbox" id="productIsPrivateLabel" class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
                         <span class="text-sm font-medium text-gray-700">Private Label (PL)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="productIsNew" class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
+                        <span class="text-sm font-medium text-gray-700">New Product</span>
                     </label>
                     <label class="flex items-center space-x-2 cursor-pointer">
                         <input type="checkbox" id="productIsActive" checked class="w-4 h-4 text-brand-green border-gray-300 rounded focus:ring-brand-green">
@@ -218,11 +277,29 @@
             markets: []
         };
 
+        // Toggle Loading
+        function toggleLoading(show, message = 'Loading...') {
+            const overlay = document.getElementById('loadingOverlay');
+            const msgEl = document.getElementById('loadingMessage');
+            
+            if (show) {
+                msgEl.textContent = message;
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
         // API helpers
         async function apiRequest(endpoint, options = {}) {
             const apiUrl = document.getElementById('apiUrl').value;
             const token = document.getElementById('authToken').value;
             
+            // Only show global loading if not explicitly disabled in options
+            if (options.useLoading !== false) {
+                toggleLoading(true, options.loadingMessage || 'Processing...');
+            }
+
             const headers = {
                 'Content-Type': 'application/json',
                 ...options.headers
@@ -247,46 +324,117 @@
                 return data;
             } catch (error) {
                 console.error('API Error:', error);
+                
+                // If unauthorized, maybe clear token?
+                if (error.message === 'Unauthorized' || error.message?.includes('401')) {
+                    console.log('Token might be invalid');
+                }
+                
                 showResponse({ error: error.message }, 'error');
                 throw error;
+            } finally {
+                if (options.useLoading !== false) {
+                    toggleLoading(false);
+                }
+            }
+        }
+
+        // Login function
+        async function login() {
+            const phone = document.getElementById('loginPhone').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!phone || !password) {
+                alert('Please enter both phone and password');
+                return;
+            }
+
+            const loginBtn = document.getElementById('loginBtn');
+            const originalBtnText = loginBtn.textContent;
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                const response = await apiRequest('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ phone, password }),
+                    loadingMessage: 'Authenticating...'
+                });
+
+                const token = response.token || response.accessToken || response.data?.token;
+                
+                if (token) {
+                    document.getElementById('authToken').value = token;
+                    localStorage.setItem('oba_auth_token', token);
+                    showResponse({ message: 'Login successful!', token: 'Token hidden for security' }, 'success');
+                } else {
+                    throw new Error('No token received in response');
+                }
+            } catch (error) {
+                console.error('Login failed:', error);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = originalBtnText;
             }
         }
 
         // Load users with bonus cards
         async function loadUsers() {
             try {
-                const response = await apiRequest('/users');
+                const response = await apiRequest('/users', { loadingMessage: 'Loading Users...' });
                 state.users = response.data || response || [];
-                
-                const userListContent = document.getElementById('userListContent');
-                userListContent.innerHTML = state.users.map(user => {
-                    const cardNumber = user.bonusCard?.cardNumber || 'No card';
-                    const isActive = user.bonusCard?.isActive;
-                    
-                    return `
-                        <button onclick="selectBonusCard('${cardNumber}')" 
-                                class="text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors ${!isActive ? 'opacity-50' : ''}">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="font-bold text-sm mb-1">${cardNumber}</div>
-                                    <div class="text-xs text-gray-700">${user.name} ${user.surname}</div>
-                                    <div class="text-xs text-gray-500">${user.phone}</div>
-                                    <div class="text-xs text-green-600 font-semibold mt-1">Balance: ${parseFloat(user.bonusBalance || 0).toFixed(2)}₼</div>
-                                </div>
-                                ${isActive 
-                                    ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Active</span>' 
-                                    : '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Inactive</span>'
-                                }
-                            </div>
-                        </button>
-                    `;
-                }).join('');
+                renderUsers();
                 
                 document.getElementById('userList').classList.remove('hidden');
                 showResponse({ message: `Loaded ${state.users.length} bonus cards`, users: state.users }, 'success');
             } catch (error) {
                 console.error('Failed to load users:', error);
             }
+        }
+
+        function renderUsers() {
+            const searchTerm = (document.getElementById('userSearch').value || '').toLowerCase();
+            const userListContent = document.getElementById('userListContent');
+            
+            const filteredUsers = state.users.filter(user => {
+                const searchStr = `${user.bonusCard?.cardNumber || ''} ${user.name || ''} ${user.surname || ''} ${user.phone || ''}`.toLowerCase();
+                return searchStr.includes(searchTerm);
+            });
+
+            if (filteredUsers.length === 0) {
+                userListContent.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-4">No users found</p>';
+                return;
+            }
+
+            userListContent.innerHTML = filteredUsers.map(user => {
+                const cardNumber = user.bonusCard?.cardNumber || 'No card';
+                const isActive = user.bonusCard?.isActive;
+                const role = user.role || 'User';
+                const roleColor = role === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700';
+                
+                return `
+                    <button onclick="selectBonusCard('${cardNumber}')" 
+                            class="text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors ${!isActive ? 'opacity-50' : ''}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-bold text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded">${cardNumber}</span>
+                                    <span class="text-xs ${roleColor} px-2 py-0.5 rounded border border-gray-200">${role}</span>
+                                </div>
+                                <div class="text-xs text-gray-700 font-semibold">${user.name} ${user.surname}</div>
+                                <div class="text-xs text-gray-500">${user.phone}</div>
+                                <div class="text-xs text-green-600 font-semibold mt-1">Balance: ${parseFloat(user.bonusBalance || 0).toFixed(2)}₼</div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                ${isActive 
+                                    ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Active</span>' 
+                                    : '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Inactive</span>'
+                                }
+                            </div>
+                        </div>
+                    </button>
+                `;
+            }).join('');
         }
 
         function selectBonusCard(cardNumber) {
@@ -300,24 +448,39 @@
         // Load markets
         async function loadMarkets() {
             try {
-                const response = await apiRequest('/markets');
+                const response = await apiRequest('/markets', { loadingMessage: 'Loading Markets...' });
                 state.markets = response.data || response || [];
-                
-                const marketListContent = document.getElementById('marketListContent');
-                marketListContent.innerHTML = state.markets.map(market => `
-                    <button onclick="selectMarket('${market.id}')" 
-                            class="text-left p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors">
-                        <div class="font-semibold">${market.name}</div>
-                        <div class="text-xs text-gray-500">${market.address}</div>
-                        <div class="text-xs text-gray-400 font-mono mt-1">${market.id}</div>
-                    </button>
-                `).join('');
+                renderMarkets();
                 
                 document.getElementById('marketList').classList.remove('hidden');
                 showResponse({ message: `Loaded ${state.markets.length} markets`, markets: state.markets }, 'success');
             } catch (error) {
                 console.error('Failed to load markets:', error);
             }
+        }
+
+        function renderMarkets() {
+            const searchTerm = (document.getElementById('marketSearch').value || '').toLowerCase();
+            const marketListContent = document.getElementById('marketListContent');
+
+            const filteredMarkets = state.markets.filter(market => {
+                const searchStr = `${market.name || ''} ${market.address || ''} ${market.id || ''}`.toLowerCase();
+                return searchStr.includes(searchTerm);
+            });
+
+            if (filteredMarkets.length === 0) {
+                marketListContent.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-4">No markets found</p>';
+                return;
+            }
+
+            marketListContent.innerHTML = filteredMarkets.map(market => `
+                <button onclick="selectMarket('${market.id}')" 
+                        class="text-left p-3 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors">
+                    <div class="font-semibold text-sm mb-1">${market.name}</div>
+                    <div class="text-xs text-gray-500 mb-1 leading-tight">${market.address}</div>
+                    <div class="text-[10px] text-gray-400 font-mono bg-gray-50 p-1 rounded border border-gray-100 truncate">${market.id}</div>
+                </button>
+            `).join('');
         }
 
         function selectMarket(marketId) {
@@ -331,31 +494,57 @@
         // Load products
         async function loadProducts() {
             try {
-                const response = await apiRequest('/products');
+                const response = await apiRequest('/products', { loadingMessage: 'Loading Products...' });
                 state.products = response.data || response || [];
-                
-                const productCatalogContent = document.getElementById('productCatalogContent');
-                productCatalogContent.innerHTML = state.products.map(product => `
-                    <button onclick="addProduct('${product.id}')" 
-                            class="text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <div class="font-semibold text-sm">${product.name} ${product.allowedRating ? "<span class=\"text-green-500 italic\">Rateable</span>" : "<span class=\"text-red-500 italic font-bold\">Unrateable</span>"}</div>
-                                <div class="text-xs text-gray-500 mt-1">${product.description || 'No description'}</div>
-                            </div>
-                            <div class="text-right ml-2">
-                                <div class="font-bold text-lg">${product.price}₼</div>
-                                ${product.isPrivateLabel ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">PL</span>' : ''}
-                            </div>
-                        </div>
-                    </button>
-                `).join('');
+                renderProducts();
                 
                 document.getElementById('productCatalog').classList.remove('hidden');
                 showResponse({ message: `Loaded ${state.products.length} products`, products: state.products }, 'success');
             } catch (error) {
                 console.error('Failed to load products:', error);
             }
+        }
+
+        function renderProducts() {
+            const searchTerm = (document.getElementById('productSearch').value || '').toLowerCase();
+            const productCatalogContent = document.getElementById('productCatalogContent');
+
+            const filteredProducts = state.products.filter(product => {
+                const searchStr = `${product.name || ''} ${product.description || ''} ${product.sku || ''}`.toLowerCase();
+                return searchStr.includes(searchTerm);
+            });
+
+            if (filteredProducts.length === 0) {
+                productCatalogContent.innerHTML = '<p class="text-gray-500 col-span-3 text-center py-4">No products found</p>';
+                return;
+            }
+
+            productCatalogContent.innerHTML = filteredProducts.map(product => `
+                <button onclick="addProduct('${product.id}')" 
+                        class="text-left p-3 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors h-full flex flex-col relative">
+                    ${product.isNew ? '<span class="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-10">NEW</span>' : ''}
+                    <div class="flex justify-between items-start mb-2 w-full">
+                        <div class="font-semibold text-sm text-gray-800 line-clamp-2 ${product.isNew ? 'pl-12' : ''}">${product.name}</div>
+                        <div class="font-bold text-md text-brand-green whitespace-nowrap ml-2">${product.price}₼</div>
+                    </div>
+                    
+                    <div class="flex-1">
+                        <div class="text-xs text-gray-500 mb-2 line-clamp-2">${product.description || 'No description'}</div>
+                    </div>
+
+                    <div class="mt-2 pt-2 border-t border-gray-100 w-full grid grid-cols-2 gap-2 text-[10px]">
+                        <div class="text-gray-600">
+                             ${product.allowedRating ? "<span class=\"text-green-600\">★ Rateable</span>" : "<span class=\"text-red-500\">Unrateable</span>"}
+                        </div>
+                        <div class="text-right">
+                             ${product.isPrivateLabel ? '<span class="bg-purple-100 text-purple-700 px-1 rounded">PL</span>' : ''}
+                        </div>
+                        <div class="col-span-2 text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded text-center">
+                            🎁 Reward: ${parseFloat(product.rewardAmount || 0).toFixed(2)}₼
+                        </div>
+                    </div>
+                </button>
+            `).join('');
         }
 
         // Add product to order
@@ -372,6 +561,7 @@
                     productId: product.id,
                     productName: product.name,
                     unitPrice: product.price,
+                    rewardAmount: product.rewardAmount,
                     quantity: 1
                 });
             }
@@ -413,8 +603,10 @@
             const description = document.getElementById('productDescription').value.trim();
             const sku = document.getElementById('productSku').value.trim();
             const price = parseFloat(document.getElementById('productPrice').value);
+            const rewardAmount = parseFloat(document.getElementById('productRewardAmount').value);
             const allowedRating = document.getElementById('productAllowedRating').checked;
             const isPrivateLabel = document.getElementById('productIsPrivateLabel').checked;
+            const isNew = document.getElementById('productIsNew').checked;
             const isActive = document.getElementById('productIsActive').checked;
 
             // Validation
@@ -428,14 +620,21 @@
                 return;
             }
 
+            if (isNaN(rewardAmount) || rewardAmount < 0) {
+                 alert('❌ Valid reward amount is required');
+                 return;
+            }
+
             // Prepare product data
             const productData = {
                 name,
                 description: description || undefined,
                 sku: sku || undefined,
                 price,
+                rewardAmount,
                 allowedRating,
                 isPrivateLabel: isPrivateLabel || false,
+                isNew: isNew || false,
                 isActive: isActive !== false
             };
 
@@ -446,7 +645,8 @@
               
                 const response = await apiRequest('/products', {
                     method: 'POST',
-                    body: JSON.stringify(productData)
+                    body: JSON.stringify(productData),
+                    loadingMessage: 'Creating Product...'
                 });
 
                 showResponse(response, 'success');
@@ -454,7 +654,7 @@
                 const newProduct = response.data || response;
                 
                 // Show success message
-                alert(`✅ Product created successfully!\n\nProduct: ${newProduct.name || name}\nID: ${newProduct.id || 'N/A'}\nPrice: ${price}₼\nAllowed Rating: ${allowedRating ? 'Yes' : 'No'}\nPrivate Label: ${isPrivateLabel ? 'Yes' : 'No'}`);
+                alert(`✅ Product created successfully!\n\nProduct: ${newProduct.name || name}\nID: ${newProduct.id || 'N/A'}\nPrice: ${price}₼\nReward: ${rewardAmount}₼\nAllowed Rating: ${allowedRating ? 'Yes' : 'No'}\nPrivate Label: ${isPrivateLabel ? 'Yes' : 'No'}`);
                 
                 // Clear form
                 clearProductForm();
@@ -475,8 +675,10 @@
             document.getElementById('productDescription').value = '';
             document.getElementById('productSku').value = '';
             document.getElementById('productPrice').value = '';
+            document.getElementById('productRewardAmount').value = '';
             document.getElementById('productAllowedRating').checked = true;
             document.getElementById('productIsPrivateLabel').checked = false;
+            document.getElementById('productIsNew').checked = false;
             document.getElementById('productIsActive').checked = true;
         }
 
@@ -607,6 +809,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 OBA Order Creator initialized');
             console.log('📍 API URL:', document.getElementById('apiUrl').value);
+
+            // Load saved token
+            const savedToken = localStorage.getItem('oba_auth_token');
+            if (savedToken) {
+                document.getElementById('authToken').value = savedToken;
+                console.log('🔑 Loaded saved auth token');
+            }
         });
     </script>
 </body>
