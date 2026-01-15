@@ -16,7 +16,10 @@ import { BonusCard } from '@/entities/bonus-card.entity';
     }),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET
+      secret: process.env.JWT_SECRET,
+      signOptions: { 
+        expiresIn: Number(process.env.JWT_EXPIRATION)
+      },
     }),
     UsersModule,
     TypeOrmModule.forFeature([BonusCard])

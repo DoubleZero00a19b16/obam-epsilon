@@ -58,7 +58,11 @@ export class UsersService {
    * Find one user by ID
    */
   async findOne(id: string): Promise<User> {
-    const user: User | null = await this.userRepo.findOneBy({ id });
+    const user: User | null = await this.userRepo.findOne({
+      where: { id },
+      relations: ["bonusCard"],
+      select: { bonusCard: true }
+    });
 
     if (!user) {
       throw new NotFoundException('User does not exist');

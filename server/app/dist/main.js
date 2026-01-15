@@ -3449,7 +3449,10 @@ exports.AuthModule = AuthModule = __decorate([
             }),
             jwt_1.JwtModule.register({
                 global: true,
-                secret: process.env.JWT_SECRET
+                secret: process.env.JWT_SECRET,
+                signOptions: {
+                    expiresIn: Number(process.env.JWT_EXPIRATION)
+                },
             }),
             users_module_1.UsersModule,
             typeorm_1.TypeOrmModule.forFeature([bonus_card_entity_1.BonusCard])
@@ -5005,7 +5008,11 @@ let UsersService = class UsersService {
         return users;
     }
     async findOne(id) {
-        const user = await this.userRepo.findOneBy({ id });
+        const user = await this.userRepo.findOne({
+            where: { id },
+            relations: ["bonusCard"],
+            select: { bonusCard: true }
+        });
         if (!user) {
             throw new common_1.NotFoundException('User does not exist');
         }
