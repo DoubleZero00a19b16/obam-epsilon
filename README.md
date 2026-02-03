@@ -1,5 +1,5 @@
 
-# Mütləq oxu!
+# Mütləq oxu! (Qovluq Strukturu)
 
 # Qovluq Strukturu
 
