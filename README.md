@@ -1,3 +1,14 @@
+
+# Mütləq oxu!
+
+# Qovluq Strukturu
+
+apk -> Android telefonlara yüklənəbilir deploy olunmuş proqram mövcuddur. (Epsilon)
+
+client -> Bu qovluq daxilində 3 proqram saxlayır. Biri ***app*** əsas proqram, ***dashboard*** admin panel, ***ordercreation*** çek əlavə etmək üçün istifadə olunsada lakin indi bunun funksyanallığı dashboard'da mövcuddur.
+
+server -> əsas backend (app) və ai_classification'ı görə bilərsiniz
+
 # 🛒 OBA Rate & Earn (by Team Epsilon)
 
 > **Turning Customer Receipts into Manufacturing Intelligence.**  
