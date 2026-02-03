@@ -927,12 +927,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                               }
                             }
                             
-                            // Default filters: last 30 days
-                            const now = new Date();
-                            const lastMonth = new Date();
-                            lastMonth.setDate(now.getDate() - 30);
-                            this.receiptFilters.startDate = lastMonth.toISOString().split('T')[0];
-                            this.receiptFilters.endDate = now.toISOString().split('T')[0];
+                            // Date filters will be empty by default
+                            this.receiptFilters.startDate = '';
+                            this.receiptFilters.endDate = '';
 
                             this.setupModalUX();
                             this.setupPullRefresh();
@@ -1009,8 +1006,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                                       page: this.receiptPagination.page,
                                       limit: this.receiptPagination.limit,
                                   };
-                                  if (this.receiptFilters.startDate) params.startDate = new Date(this.receiptFilters.startDate).toISOString();
-                                  if (this.receiptFilters.endDate) params.endDate = new Date(this.receiptFilters.endDate).toISOString();
+                                  if (this.receiptFilters.startDate) {
+                                    const startDate = new Date(this.receiptFilters.startDate);
+                                    startDate.setHours(0, 0, 0, 0);
+                                    params.startDate = startDate.toISOString();
+                                  }
+                                  if (this.receiptFilters.endDate) {
+                                    const endDate = new Date(this.receiptFilters.endDate);
+                                    endDate.setHours(23, 59, 59, 999);
+                                    params.endDate = endDate.toISOString();
+                                  }
 
                                   const response = await api.getUserOrders(params);
                                   console.log('Orders API response:', response);
@@ -2341,12 +2346,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
             </div>
             <div class="grid grid-cols-1 gap-2">
               <div class="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-200">
-                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">Kimdən:</span>
+                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">DƏN</span>
                 <input type="date" x-model="receiptFilters.startDate" @change="receiptPagination.page = 1; loadUserData()" 
                        class="text-sm font-bold outline-none text-gray-700 bg-transparent flex-1">
               </div>
               <div class="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-200">
-                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">Kimə:</span>
+                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">DƏK</span>
                 <input type="date" x-model="receiptFilters.endDate" @change="receiptPagination.page = 1; loadUserData()" 
                        class="text-sm font-bold outline-none text-gray-700 bg-transparent flex-1">
               </div>
