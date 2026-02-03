@@ -1,5 +1,5 @@
 
-# MÜTLƏQ OXU!
+# Mütləq oxu!
 
 Dashboard (admin panel) deploy olunub və AWS cloud'da işləyir!
 
