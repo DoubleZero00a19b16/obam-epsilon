@@ -805,6 +805,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                        },
 
                       setupPullRefresh() {
+                          const alpineInstance = this; // Store Alpine instance reference
                           let startY = 0;
                           let isPulling = false;
                           const threshold = 150; // Pull distance to trigger refresh
@@ -821,7 +822,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
                           window.addEventListener('touchstart', (e) => {
                               // Only activate if at the very top and no modals are open
-                              if (window.scrollY === 0 && !this.isModalOpen) {
+                              if (window.scrollY === 0 && !alpineInstance.isModalOpen) {
                                   startY = e.touches[0].clientY;
                                   isPulling = true;
                               }
@@ -876,11 +877,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                                       // Reload Data
                                       if (api.getToken()) {
                                           await Promise.all([
-                                              this.loadUserData(),
-                                              this.loadTopProducts()
+                                              alpineInstance.loadUserData(),
+                                              alpineInstance.loadTopProducts()
                                           ]);
                                           
-                                          this.showToast(this.getText('updated'), 'success');
+                                          alpineInstance.showToast(alpineInstance.getText('updated'), 'success');
                                       } else {
                                           window.location.reload();
                                       }
