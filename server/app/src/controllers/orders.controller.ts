@@ -5,6 +5,7 @@ import { MyOrdersResponseDto, GetMyOrdersQueryDto, ProductInOrderDto, DeleteOrde
 import { CreateOrderDto, OrderCreatedResponseDto } from '../dtos/create-order.dto';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AdminGuard } from '@/guards/admin.guard';
+import { PaginationParamsDto, PaginatedResponseDto } from '@/dtos/pagination.dto';
 
 /**
  * Controller for order and purchase history operations
@@ -54,6 +55,27 @@ export class OrdersController {
   }
 
   /**
+   * GET /orders
+   * Admin: Fetch all orders with pagination
+   */
+  @Get()
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Get all orders (Admin)',
+    description: 'Retrieve a paginated list of all orders across the system (Admin only).',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Orders retrieved successfully',
+    type: PaginatedResponseDto,
+  })
+  async findAll(
+    @Query() query: GetMyOrdersQueryDto,
+  ): Promise<PaginatedResponseDto<MyOrdersResponseDto>> {
+    return this.ordersService.findAll(query);
+  }
+
+  /**
    * GET /orders/my-orders
    * Fetch user's purchase history with products sorted by:
    * 1. PL (Private Label) status - PL products first
@@ -71,18 +93,10 @@ export class OrdersController {
   })
   async getMyOrders(
     @Query() query: GetMyOrdersQueryDto,
-  ): Promise<{
-    statusCode: number;
-    message: string;
-    data: MyOrdersResponseDto[];
-  }> {
+  ): Promise<PaginatedResponseDto<MyOrdersResponseDto>> {
     const orders = await this.ordersService.getMyOrders(query);
 
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Orders retrieved successfully',
-      data: orders
-    };
+    return orders;
   }
 
   /**

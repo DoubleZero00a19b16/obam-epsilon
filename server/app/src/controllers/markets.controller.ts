@@ -1,17 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { MarketsService } from '../services/markets.service';
 import { CreateMarketDto } from '@/dtos/create-market.dto';
 import { UpdateMarketDto } from '@/dtos/update-market.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AdminGuard } from '@/guards/admin.guard';
+import { PaginationParamsDto } from '@/dtos/pagination.dto';
 
 @Controller('markets')
 @ApiTags('Markets')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class MarketsController {
-  constructor(private readonly marketsService: MarketsService) {}
+  constructor(private readonly marketsService: MarketsService) { }
 
   @Post()
   create(@Body() createMarketDto: CreateMarketDto) {
@@ -19,8 +20,9 @@ export class MarketsController {
   }
 
   @Get()
-  findAll() {
-    return this.marketsService.findAll();
+  @ApiOperation({ summary: 'Get all markets with pagination' })
+  findAll(@Query() query: PaginationParamsDto) {
+    return this.marketsService.findAll(query);
   }
 
   @Get(':id')

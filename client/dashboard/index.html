@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBA Market - Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            market: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            },
+            accent: {
+              50: '#fefce8',
+              100: '#fef9c3',
+              200: '#fef08a',
+              300: '#fde047',
+              400: '#facc15',
+              500: '#eab308',
+              600: '#ca8a04',
+              700: '#a16207',
+              800: '#854d0e',
+              900: '#713f12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #dcfce7; }
+    ::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #16a34a; }
+    .gradient-nav { background: linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%); }
+    .card-shadow { box-shadow: 0 4px 6px -1px rgba(22, 101, 52, 0.1), 0 2px 4px -1px rgba(22, 101, 52, 0.06); }
+    .stat-card:hover { transform: translateY(-4px); transition: all 0.3s ease; }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="h-full bg-market-50" x-data="dashboard()" x-cloak>
+  
+  <!-- Main Container -->
+  <div class="min-h-full">
+    
+    <!-- Top Navigation Bar -->
+    <nav class="gradient-nav shadow-xl">
+      <div class="max-w-full px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <div class="bg-accent-400 p-2 rounded-lg mr-3">
+              <i class="fas fa-store text-market-800 text-xl"></i>
+            </div>
+            <div>
+              <h1 class="text-white text-xl font-bold">OBA Market</h1>
+              <p class="text-market-200 text-xs">Admin Dashboard</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div class="bg-market-600/50 px-4 py-2 rounded-lg">
+              <i class="fas fa-user-shield text-accent-400 mr-2"></i>
+              <span class="text-white font-medium" x-text="adminName"></span>
+            </div>
+            <button @click="logout()" class="bg-accent-500 hover:bg-accent-400 text-market-900 px-4 py-2 rounded-lg transition font-semibold">
+              <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Stats Overview -->
+    <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        <!-- Users Card -->
+        <div class="bg-white rounded-2xl card-shadow p-6 stat-card border-l-4 border-market-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-market-600 text-sm font-semibold uppercase tracking-wide">Total Users</p>
+              <p class="text-4xl font-bold text-market-800 mt-1" x-text="stats.totalUsers"></p>
+            </div>
+            <div class="bg-market-100 p-4 rounded-2xl">
+              <i class="fas fa-users text-market-600 text-2xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products Card -->
+        <div class="bg-white rounded-2xl card-shadow p-6 stat-card border-l-4 border-accent-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-market-600 text-sm font-semibold uppercase tracking-wide">Products</p>
+              <p class="text-4xl font-bold text-market-800 mt-1" x-text="stats.totalProducts"></p>
+            </div>
+            <div class="bg-accent-100 p-4 rounded-2xl">
+              <i class="fas fa-box text-accent-600 text-2xl"></i>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Ratings Card -->
+        <div class="bg-white rounded-2xl card-shadow p-6 stat-card border-l-4 border-accent-400">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-market-600 text-sm font-semibold uppercase tracking-wide">Reviews</p>
+              <p class="text-4xl font-bold text-market-800 mt-1" x-text="stats.totalRatings"></p>
+            </div>
+            <div class="bg-accent-100 p-4 rounded-2xl">
+              <i class="fas fa-star text-accent-500 text-2xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Markets Card -->
+        <div class="bg-white rounded-2xl card-shadow p-6 stat-card border-l-4 border-market-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-market-600 text-sm font-semibold uppercase tracking-wide">Markets</p>
+              <p class="text-4xl font-bold text-market-800 mt-1" x-text="stats.totalMarkets"></p>
+            </div>
+            <div class="bg-market-100 p-4 rounded-2xl">
+              <i class="fas fa-map-marker-alt text-market-600 text-2xl"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="bg-white rounded-2xl card-shadow mb-4 overflow-hidden">
+        <div class="border-b-2 border-market-100">
+          <nav class="flex space-x-1 px-4" aria-label="Tabs">
+            <button @click="activeTab = 'users'; loadUsers()" 
+                    :class="activeTab === 'users' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-users mr-2"></i>Users
+            </button>
+            <button @click="activeTab = 'products'; loadProducts()" 
+                    :class="activeTab === 'products' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-box mr-2"></i>Products
+            </button>
+            <button @click="activeTab = 'markets'; loadMarkets()" 
+                    :class="activeTab === 'markets' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-map-marker-alt mr-2"></i>Markets
+            </button>
+            <button @click="activeTab = 'ratings'; loadRatings()" 
+                    :class="activeTab === 'ratings' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-star mr-2"></i>Ratings
+            </button>
+            <button @click="activeTab = 'orders'" 
+                    :class="activeTab === 'orders' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-shopping-cart mr-2"></i>New Order
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="bg-white rounded-2xl card-shadow p-6 fade-in">
+        
+        <!-- Loading State -->
+        <div x-show="loading" class="flex justify-center items-center py-12">
+          <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-market-500 text-4xl mb-4"></i>
+            <p class="text-market-600 font-medium">Loading data...</p>
+          </div>
+        </div>
+
+        <!-- USERS TAB -->
+        <div x-show="activeTab === 'users' && !loading">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-market-800">
+              <i class="fas fa-users text-market-500 mr-2"></i>User Management
+            </h2>
+            <button @click="openCreateUserModal()" class="bg-market-500 hover:bg-market-600 text-white px-5 py-2.5 rounded-xl transition font-semibold shadow-lg">
+              <i class="fas fa-plus mr-2"></i>Add User
+            </button>
+          </div>
+
+          <!-- Search -->
+          <div class="mb-6">
+            <div class="relative">
+              <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-market-400"></i>
+              <input type="text" x-model="searchQuery" @input="searchUsers()" placeholder="Search users by name, phone..." 
+                     class="w-full pl-12 pr-4 py-3 border-2 border-market-200 rounded-xl focus:ring-2 focus:ring-market-500 focus:border-market-500 transition">
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div class="overflow-x-auto rounded-xl border border-market-200">
+            <table class="min-w-full divide-y divide-market-200">
+              <thead class="bg-market-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">ID</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Name</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Phone</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Bonus Card</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Bonus Balance</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Role</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Created</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-market-100">
+                <template x-for="user in paginatedUsers()" :key="user.id">
+                  <tr class="hover:bg-market-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <span class="text-sm font-mono text-market-700 bg-market-100 px-2 py-1 rounded" x-text="user.id.substring(0, 8) + '...'"></span>
+                        <button @click="copyToClipboard(user.id)" class="ml-2 text-market-400 hover:text-market-600 transition">
+                          <i class="fas fa-copy text-xs"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="bg-market-100 text-market-600 w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3">
+                          <span x-text="user.name.charAt(0) + user.surname.charAt(0)"></span>
+                        </div>
+                        <div class="text-sm font-semibold text-market-800" x-text="user.name + ' ' + user.surname"></div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600" x-text="user.phone"></td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center" x-show="user.bonusCard">
+                        <span class="text-sm font-mono text-accent-700 bg-accent-50 px-2 py-1 rounded border border-accent-100" x-text="user.bonusCard.cardNumber"></span>
+                        <button @click="copyToClipboard(user.bonusCard.cardNumber)" class="ml-2 text-accent-400 hover:text-accent-600 transition">
+                          <i class="fas fa-copy text-xs"></i>
+                        </button>
+                      </div>
+                      <span x-show="!user.bonusCard" class="text-xs text-market-400 italic">No Card</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-accent-100 text-accent-800">
+                        ₼<span x-text="Number(user.bonusBalance).toFixed(2)"></span>
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="user.role === 'admin' ? 'bg-market-500 text-white' : 'bg-market-100 text-market-700'" 
+                            class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full uppercase" x-text="user.role"></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600" x-text="formatDate(user.createdAt)"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                      <button @click="editUser(user)" class="text-market-600 hover:text-market-800 bg-market-100 p-2 rounded-lg transition">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button @click="deleteUser(user.id)" class="text-red-600 hover:text-red-800 bg-red-100 p-2 rounded-lg transition">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-sm text-market-600">Showing <span x-text="Math.min((currentPage.users - 1) * itemsPerPage + 1, filteredUsers.length)"></span> - <span x-text="Math.min(currentPage.users * itemsPerPage, filteredUsers.length)"></span> of <span x-text="filteredUsers.length"></span> users</p>
+            <div class="flex space-x-2">
+              <button @click="goToPage('users', currentPage.users - 1)" :disabled="currentPage.users === 1" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                <i class="fas fa-chevron-left"></i> Prev
+              </button>
+              <span class="px-4 py-2 bg-market-500 text-white rounded-lg font-bold" x-text="currentPage.users + ' / ' + totalPages('users')"></span>
+              <button @click="goToPage('users', currentPage.users + 1)" :disabled="currentPage.users >= totalPages('users')" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRODUCTS TAB -->
+        <div x-show="activeTab === 'products' && !loading">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-market-800">
+              <i class="fas fa-box text-accent-500 mr-2"></i>Product Catalog
+            </h2>
+            <button @click="openCreateProductModal()" class="bg-market-500 hover:bg-market-600 text-white px-5 py-2.5 rounded-xl transition font-semibold shadow-lg">
+              <i class="fas fa-plus mr-2"></i>Add Product
+            </button>
+          </div>
+
+          <!-- Search -->
+          <div class="mb-6">
+            <div class="relative">
+              <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-market-400"></i>
+              <input type="text" x-model="searchQuery" @input="searchProducts()" placeholder="Search products by name, SKU..." 
+                     class="w-full pl-12 pr-4 py-3 border-2 border-market-200 rounded-xl focus:ring-2 focus:ring-market-500 focus:border-market-500 transition">
+            </div>
+          </div>
+
+          <!-- Products Table -->
+          <div class="overflow-x-auto rounded-xl border border-market-200">
+            <table class="min-w-full divide-y divide-market-200">
+              <thead class="bg-market-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">ID</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Product</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">SKU</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Price</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Type</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Reward</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Rating</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-market-100">
+                <template x-for="product in paginatedProducts()" :key="product.id">
+                  <tr class="hover:bg-market-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <span class="text-sm font-mono text-market-700 bg-market-100 px-2 py-1 rounded" x-text="product.id.substring(0, 8) + '...'"></span>
+                        <button @click="copyToClipboard(product.id)" class="ml-2 text-market-400 hover:text-market-600 transition">
+                          <i class="fas fa-copy text-xs"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="bg-accent-100 text-accent-700 w-10 h-10 rounded-xl flex items-center justify-center mr-3">
+                          <i class="fas fa-box"></i>
+                        </div>
+                        <div>
+                          <div class="text-sm font-semibold text-market-800" x-text="product.name"></div>
+                          <div class="text-xs text-market-500" x-text="product.description ? product.description.substring(0, 30) + '...' : ''"></div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-market-600" x-text="product.sku || 'N/A'"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-market-800">₼<span x-text="Number(product.price).toFixed(2)"></span></td>
+                    <td class="px-6 py-4 whitespace-nowrap space-x-1">
+                      <span x-show="product.isPrivateLabel" class="px-2 py-1 text-xs font-bold rounded-full bg-market-500 text-white">PL</span>
+                      <span x-show="!product.isPrivateLabel" class="px-2 py-1 text-xs font-bold rounded-full bg-market-100 text-market-600">Normal</span>
+                      <span x-show="product.isNew" class="px-2 py-1 text-xs font-bold rounded-full bg-accent-400 text-market-800">NEW</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-accent-600">₼<span x-text="Number(product.rewardAmount).toFixed(2)"></span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600">
+                      <span class="text-accent-500">★</span> <span x-text="Number(product.averageRating || 0).toFixed(1)"></span> 
+                      <span class="text-market-400">(<span x-text="product.ratingCount || 0"></span>)</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="product.isActive ? 'bg-market-100 text-market-700' : 'bg-red-100 text-red-700'" 
+                            class="px-3 py-1 text-xs font-bold rounded-full" x-text="product.isActive ? 'Active' : 'Inactive'"></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
+                      <button @click="editProduct(product)" class="text-market-600 hover:text-market-800 bg-market-100 p-2 rounded-lg transition">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-800 bg-red-100 p-2 rounded-lg transition">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-sm text-market-600">Showing <span x-text="Math.min((currentPage.products - 1) * itemsPerPage + 1, filteredProducts.length)"></span> - <span x-text="Math.min(currentPage.products * itemsPerPage, filteredProducts.length)"></span> of <span x-text="filteredProducts.length"></span> products</p>
+            <div class="flex space-x-2">
+              <button @click="goToPage('products', currentPage.products - 1)" :disabled="currentPage.products === 1" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                <i class="fas fa-chevron-left"></i> Prev
+              </button>
+              <span class="px-4 py-2 bg-market-500 text-white rounded-lg font-bold" x-text="currentPage.products + ' / ' + totalPages('products')"></span>
+              <button @click="goToPage('products', currentPage.products + 1)" :disabled="currentPage.products >= totalPages('products')" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MARKETS TAB -->
+        <div x-show="activeTab === 'markets' && !loading">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-market-800">
+              <i class="fas fa-map-marker-alt text-market-600 mr-2"></i>Market Locations
+            </h2>
+            <button @click="openCreateMarketModal()" class="bg-market-500 hover:bg-market-600 text-white px-5 py-2.5 rounded-xl transition font-semibold shadow-lg">
+              <i class="fas fa-plus mr-2"></i>Add Market
+            </button>
+          </div>
+
+          <!-- Markets Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="market in markets" :key="market.id">
+              <div class="bg-market-50 rounded-2xl p-6 border-2 border-market-200 hover:border-market-400 transition">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="bg-market-500 text-white p-3 rounded-xl">
+                    <i class="fas fa-store text-xl"></i>
+                  </div>
+                  <span :class="market.isActive ? 'bg-market-100 text-market-700' : 'bg-red-100 text-red-700'" 
+                        class="px-3 py-1 text-xs font-bold rounded-full" x-text="market.isActive ? 'Active' : 'Inactive'"></span>
+                </div>
+                <h3 class="text-xl font-bold text-market-800 mb-2" x-text="market.name"></h3>
+                <p class="text-market-600 text-sm mb-3" x-text="market.address"></p>
+                <p class="text-market-500 text-xs mb-4" x-text="market.latitude && market.longitude ? 'GPS: ' + market.latitude + ', ' + market.longitude : 'No GPS data'"></p>
+                <div class="flex space-x-2">
+                  <button @click="editMarket(market)" class="flex-1 bg-market-100 text-market-700 py-2 rounded-xl font-semibold hover:bg-market-200 transition">
+                    <i class="fas fa-edit mr-1"></i>Edit
+                  </button>
+                  <button @click="deleteMarket(market.id)" class="bg-red-100 text-red-600 px-4 py-2 rounded-xl font-semibold hover:bg-red-200 transition">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+
+        <!-- RATINGS TAB -->
+        <div x-show="activeTab === 'ratings' && !loading">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 class="text-2xl font-bold text-market-800">
+              <i class="fas fa-star text-accent-500 mr-2"></i>Customer Reviews & Ratings
+            </h2>
+            <div class="relative w-full md:w-96">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-market-400">
+                <i class="fas fa-search"></i>
+              </span>
+              <input type="text" 
+                     x-model="searchQuery" 
+                     @input="searchRatings()" 
+                     placeholder="Search by ID, User, Product or Comment..." 
+                     class="block w-full pl-10 pr-3 py-2.5 border border-market-200 rounded-xl leading-5 bg-market-50 placeholder-market-400 focus:outline-none focus:ring-2 focus:ring-market-500 focus:border-market-500 sm:text-sm transition shadow-inner">
+            </div>
+          </div>
+
+          <!-- Ratings Table -->
+          <div class="overflow-x-auto rounded-xl border border-market-200">
+            <table class="min-w-full divide-y divide-market-200">
+              <thead class="bg-market-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Rating ID</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">User</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Product</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Score</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Reason</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Comment</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Reward</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Date</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-market-100">
+                <template x-for="rating in paginatedRatings()" :key="rating.id">
+                  <tr class="hover:bg-market-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <span class="text-sm font-mono text-market-700 bg-market-100 px-2 py-1 rounded" x-text="rating.id.substring(0, 8) + '...'"></span>
+                        <button @click="copyToClipboard(rating.id)" class="ml-2 text-market-400 hover:text-market-600 transition">
+                          <i class="fas fa-copy text-xs"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex flex-col">
+                        <span class="text-sm font-bold text-market-800" x-text="rating.userName"></span>
+                        <span class="text-xs text-market-500" x-text="rating.userPhone"></span>
+                        <div class="flex items-center mt-1">
+                          <span class="text-[10px] font-mono text-market-400" x-text="rating.userId ? rating.userId.substring(0, 8) + '...' : 'N/A'"></span>
+                          <button x-show="rating.userId" @click="copyToClipboard(rating.userId)" class="ml-1 text-market-300 hover:text-market-500 transition">
+                            <i class="fas fa-copy text-[10px]"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex flex-col">
+                        <span class="text-sm text-market-700" x-text="rating.productName"></span>
+                        <div class="flex items-center mt-1">
+                          <span class="text-[10px] font-mono text-market-400" x-text="rating.productId ? rating.productId.substring(0, 8) + '...' : 'N/A'"></span>
+                          <button x-show="rating.productId" @click="copyToClipboard(rating.productId)" class="ml-1 text-market-300 hover:text-market-500 transition">
+                            <i class="fas fa-copy text-[10px]"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <template x-for="i in 5">
+                          <span :class="i <= rating.score ? 'text-accent-400' : 'text-market-200'" class="text-lg">★</span>
+                        </template>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      <span x-show="rating.reason" :class="rating.score <= 3 ? 'bg-red-100 text-red-700' : 'bg-market-100 text-market-700'" 
+                            class="px-2 py-1 text-xs font-bold rounded-full" x-text="rating.reason"></span>
+                      <span x-show="!rating.reason" class="text-market-400">-</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-market-600 max-w-xs truncate">
+                      <span x-text="rating.comment || 'No comment'"></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-sm font-bold">₼<span x-text="Number(rating.rewardAmount || 0).toFixed(2)"></span></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600" x-text="formatDate(rating.createdAt)"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button @click="deleteRating(rating.id)" class="text-red-600 hover:text-red-800 bg-red-100 p-2 rounded-lg transition">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-sm text-market-600">Showing <span x-text="Math.min((currentPage.ratings - 1) * itemsPerPage + 1, ratings.length)"></span> - <span x-text="Math.min(currentPage.ratings * itemsPerPage, ratings.length)"></span> of <span x-text="ratings.length"></span> ratings</p>
+            <div class="flex space-x-2">
+              <button @click="goToPage('ratings', currentPage.ratings - 1)" :disabled="currentPage.ratings === 1" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                <i class="fas fa-chevron-left"></i> Prev
+              </button>
+              <span class="px-4 py-2 bg-market-500 text-white rounded-lg font-bold" x-text="currentPage.ratings + ' / ' + totalPages('ratings')"></span>
+              <button @click="goToPage('ratings', currentPage.ratings + 1)" :disabled="currentPage.ratings >= totalPages('ratings')" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- NEW ORDER TAB -->
+        <div x-show="activeTab === 'orders' && !loading" class="bg-white rounded-3xl shadow-lg border border-market-100 overflow-hidden">
+          <div class="bg-market-700 px-8 py-5 flex justify-between items-center">
+            <h3 class="text-2xl font-bold text-white">Create New Order</h3>
+            <button @click="openCreateOrderModal()" class="text-white/70 hover:text-white transition flex items-center text-sm font-bold">
+              <i class="fas fa-redo-alt mr-2"></i>Reset Form
+            </button>
+          </div>
+          
+          <div class="p-8 space-y-8">
+            <!-- Order Metadata -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label class="block text-sm font-bold text-market-700 ml-1">Market Location</label>
+                <select x-model="orderForm.marketId" class="w-full px-5 py-3 border-2 border-market-100 rounded-2xl focus:border-market-500 outline-none transition bg-market-50/30">
+                  <option value="">Select a market...</option>
+                  <template x-for="market in markets" :key="market.id">
+                    <option :value="market.id" x-text="market.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="space-y-2">
+                <label class="block text-sm font-bold text-market-700 ml-1">Select Bonus Card / User</label>
+                <div class="relative">
+                  <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-market-400"></i>
+                  <input type="text" x-model="userSearchQuery" @input="orderForm.bonusCardNumber = ''"
+                         placeholder="Search by name, phone or card number..."
+                         class="w-full pl-12 pr-4 py-3 border-2 border-market-100 rounded-2xl focus:border-market-500 outline-none transition bg-market-50/30">
+                </div>
+                
+                <!-- User Selection Dropdown -->
+                <div x-show="userSearchQuery.length >= 2 && !orderForm.bonusCardNumber" 
+                     class="max-h-48 overflow-y-auto border-2 border-market-100 rounded-2xl bg-white shadow-xl mt-2 custom-scrollbar">
+                  <template x-for="user in filteredUsersForOrder()" :key="user.id">
+                    <button @click="orderForm.bonusCardNumber = user.bonusCard.cardNumber; userSearchQuery = user.name + ' ' + user.surname"
+                            class="w-full text-left p-3 hover:bg-market-50 transition border-b border-market-50 last:border-0">
+                      <div class="flex justify-between items-center">
+                        <div>
+                          <div class="text-sm font-bold text-market-800" x-text="user.name + ' ' + user.surname"></div>
+                          <div class="text-[10px] text-market-500" x-text="user.phone"></div>
+                        </div>
+                        <div class="text-xs font-mono bg-accent-50 text-accent-700 px-2 py-1 rounded border border-accent-100" 
+                             x-text="user.bonusCard.cardNumber"></div>
+                      </div>
+                    </button>
+                  </template>
+                </div>
+                
+                <!-- Selected Card Banner -->
+                <div x-show="orderForm.bonusCardNumber" class="flex items-center justify-between p-3 bg-accent-50 border-2 border-accent-100 rounded-2xl mt-2">
+                   <div class="flex items-center text-accent-800">
+                     <i class="fas fa-id-card mr-2 text-accent-600"></i>
+                     <span class="text-sm font-bold" x-text="'Selected Card: ' + orderForm.bonusCardNumber"></span>
+                   </div>
+                   <button @click="orderForm.bonusCardNumber = ''; userSearchQuery = ''" class="text-accent-600 hover:text-accent-800 p-1">
+                     <i class="fas fa-times-circle"></i>
+                   </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Selection -->
+            <div class="space-y-4">
+              <h4 class="text-lg font-bold text-market-800 ml-1">📦 Add Products</h4>
+              
+              <!-- Product Search -->
+              <div class="relative">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-market-400"></i>
+                <input type="text" x-model="catalogSearchQuery" placeholder="Search products by name or SKU..." 
+                       class="w-full pl-12 pr-4 py-3 border-2 border-market-100 rounded-2xl focus:border-market-500 outline-none transition bg-market-50/30">
+              </div>
+
+              <!-- Product Catalog (Filtered) -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                <template x-for="product in filteredCatalogProducts()" :key="product.id">
+                  <button @click="addProductToOrder(product)" 
+                          class="text-left p-3 bg-white border-2 border-market-50 rounded-2xl hover:border-market-500 hover:shadow-md transition group">
+                    <div class="text-xs font-bold text-market-800 line-clamp-2" x-text="product.name"></div>
+                    <div class="flex justify-between items-center mt-2">
+                      <span class="text-market-600 font-bold text-sm">₼<span x-text="Number(product.price).toFixed(2)"></span></span>
+                      <i class="fas fa-plus-circle text-market-200 group-hover:text-market-500 transition"></i>
+                    </div>
+                  </button>
+                </template>
+              </div>
+            </div>
+
+            <!-- Selected Items List -->
+            <div class="space-y-4 pt-4 border-t border-market-100">
+              <div class="flex justify-between items-center">
+                <h4 class="text-lg font-bold text-market-800 ml-1">🛒 Selected Items</h4>
+                <span class="text-xs font-bold px-3 py-1 bg-market-100 text-market-700 rounded-full" x-text="orderForm.items.length + ' items'"></span>
+              </div>
+
+              <div class="space-y-2">
+                <template x-for="(item, index) in orderForm.items" :key="index">
+                  <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-market-200 transition">
+                    <div class="flex-1">
+                      <div class="font-bold text-market-800" x-text="item.name"></div>
+                      <div class="text-xs text-market-500">₼<span x-text="item.price.toFixed(2)"></span> per unit</div>
+                    </div>
+                    
+                    <div class="flex items-center bg-white rounded-xl border border-market-100 p-1">
+                      <button @click="updateOrderItemQuantity(index, -1)" class="w-8 h-8 flex items-center justify-center text-market-600 hover:bg-market-50 rounded-lg transition">-</button>
+                      <span class="w-10 text-center font-bold text-market-800" x-text="item.quantity"></span>
+                      <button @click="updateOrderItemQuantity(index, 1)" class="w-8 h-8 flex items-center justify-center text-market-600 hover:bg-market-50 rounded-lg transition">+</button>
+                    </div>
+
+                    <div class="flex flex-col items-end w-24">
+                       <div class="font-bold text-market-800">₼<span x-text="(item.price * item.quantity).toFixed(2)"></span></div>
+                       <template x-if="item.rewardAmount > 0">
+                         <div class="text-[10px] font-bold text-accent-500 bg-accent-50 px-1.5 py-0.5 rounded flex items-center mt-1">
+                           <i class="fas fa-gift mr-1 text-[8px]"></i>
+                           +₼<span x-text="item.rewardAmount.toFixed(2)"></span>
+                         </div>
+                       </template>
+                    </div>
+                    
+                    <button @click="removeOrderItem(index)" class="text-red-400 hover:text-red-600 p-2 transition">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </template>
+                
+                <template x-if="orderForm.items.length === 0">
+                  <div class="text-center py-10 border-2 border-dashed border-market-100 rounded-2xl">
+                    <div class="bg-market-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <i class="fas fa-shopping-basket text-market-300"></i>
+                    </div>
+                    <p class="text-market-400 font-medium">No items selected. Search and add products above.</p>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Order Summary -->
+            <template x-if="orderForm.items.length > 0">
+              <div class="bg-market-800 rounded-3xl p-6 flex justify-between items-center text-white shadow-xl">
+                 <div>
+                   <p class="text-market-300 text-xs font-bold uppercase tracking-widest mb-1">Total Amount Due</p>
+                   <div class="flex items-baseline">
+                     <span class="text-xl font-bold mr-1">₼</span>
+                     <span class="text-4xl font-black" x-text="calculateOrderTotal().toFixed(2)"></span>
+                   </div>
+                 </div>
+                 <div class="text-right space-y-1">
+                   <div class="inline-flex items-center px-3 py-1 bg-accent-400/20 text-accent-400 rounded-full text-xs font-black">
+                     <i class="fas fa-gift mr-2"></i>
+                     REWARD EARNED
+                   </div>
+                   <p class="text-xl font-bold">+₼<span x-text="calculateOrderReward().toFixed(2)"></span></p>
+                 </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="bg-market-50 px-8 py-6 flex justify-end space-x-4 border-t border-market-100">
+            <button @click="saveOrder()" :disabled="!orderForm.marketId || !orderForm.bonusCardNumber || orderForm.items.length === 0"
+                    class="px-12 py-4 bg-market-600 text-white rounded-2xl font-bold hover:bg-market-700 transition shadow-xl disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+              <i class="fas fa-check-circle mr-2"></i> Complete & Finalize Order
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- User Modal -->
+  <div x-show="showUserModal" class="fixed z-50 inset-0 overflow-y-auto" x-cloak>
+    <div class="flex items-center justify-center min-h-screen px-4">
+      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showUserModal = false"></div>
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full relative z-10 overflow-hidden">
+        <div class="bg-market-500 px-6 py-4">
+          <h3 class="text-xl font-bold text-white" x-text="editingUser ? 'Edit User Role' : 'Create New User'"></h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <!-- Show user info when editing (read-only) -->
+          <template x-if="editingUser">
+            <div class="bg-market-50 rounded-xl p-4 mb-4">
+              <p class="text-market-600 text-sm mb-1">Editing user:</p>
+              <p class="text-market-800 font-bold text-lg" x-text="editingUser.name + ' ' + editingUser.surname"></p>
+              <p class="text-market-600 text-sm" x-text="editingUser.phone"></p>
+            </div>
+          </template>
+          
+          <!-- Create mode fields -->
+          <template x-if="!editingUser">
+            <div class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-market-700 mb-1">First Name</label>
+                  <input type="text" x-model="userForm.name" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-market-700 mb-1">Last Name</label>
+                  <input type="text" x-model="userForm.surname" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-market-700 mb-1">Phone (include +)</label>
+                <input type="text" x-model="userForm.phone" placeholder="+9941234567" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-market-700 mb-1">Date of Birth</label>
+                <input type="date" x-model="userForm.dateOfBirth" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-market-700 mb-1">Password</label>
+                <input type="password" x-model="userForm.password" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+              </div>
+            </div>
+          </template>
+          
+          <!-- Role field (shown for both create and edit) -->
+          <div>
+            <label class="block text-sm font-semibold text-market-700 mb-1">Role</label>
+            <select x-model="userForm.role" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500 focus:ring-2 focus:ring-market-200">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+            <p x-show="editingUser" class="text-xs text-market-500 mt-1"><i class="fas fa-info-circle mr-1"></i>Only role can be changed when editing a user.</p>
+          </div>
+        </div>
+        <div class="bg-market-50 px-6 py-4 flex justify-end space-x-3">
+          <button @click="showUserModal = false" class="px-5 py-2.5 border-2 border-market-300 text-market-700 rounded-xl font-semibold hover:bg-market-100 transition">Cancel</button>
+          <button @click="saveUser()" class="px-5 py-2.5 bg-market-500 text-white rounded-xl font-semibold hover:bg-market-600 transition shadow-lg" x-text="editingUser ? 'Update Role' : 'Create User'"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Modal -->
+  <div x-show="showProductModal" class="fixed z-50 inset-0 overflow-y-auto" x-cloak>
+    <div class="flex items-center justify-center min-h-screen px-4">
+      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showProductModal = false"></div>
+      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full relative z-10 overflow-hidden">
+        <div class="bg-accent-400 px-6 py-4">
+          <h3 class="text-xl font-bold text-market-800" x-text="editingProduct ? 'Edit Product' : 'Create New Product'"></h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">Product Name</label>
+              <input type="text" x-model="productForm.name" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">SKU</label>
+              <input type="text" x-model="productForm.sku" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-market-700 mb-1">Description</label>
+            <textarea x-model="productForm.description" rows="2" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">Price (₼)</label>
+              <input type="number" step="0.01" x-model="productForm.price" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">Reward Amount (₼)</label>
+              <input type="number" step="0.01" x-model="productForm.rewardAmount" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <label class="flex items-center p-3 bg-market-50 rounded-xl cursor-pointer hover:bg-market-100 transition">
+              <input type="checkbox" x-model="productForm.isPrivateLabel" class="h-5 w-5 text-market-500 rounded">
+              <span class="ml-3 text-sm font-medium text-market-700">Private Label (PL)</span>
+            </label>
+            <label class="flex items-center p-3 bg-accent-50 rounded-xl cursor-pointer hover:bg-accent-100 transition">
+              <input type="checkbox" x-model="productForm.isNew" class="h-5 w-5 text-accent-500 rounded">
+              <span class="ml-3 text-sm font-medium text-market-700">New Product</span>
+            </label>
+            <label class="flex items-center p-3 bg-market-50 rounded-xl cursor-pointer hover:bg-market-100 transition">
+              <input type="checkbox" x-model="productForm.isActive" class="h-5 w-5 text-market-500 rounded">
+              <span class="ml-3 text-sm font-medium text-market-700">Active</span>
+            </label>
+
+          </div>
+        </div>
+        <div class="bg-market-50 px-6 py-4 flex justify-end space-x-3">
+          <button @click="showProductModal = false" class="px-5 py-2.5 border-2 border-market-300 text-market-700 rounded-xl font-semibold hover:bg-market-100 transition">Cancel</button>
+          <button @click="saveProduct()" class="px-5 py-2.5 bg-market-500 text-white rounded-xl font-semibold hover:bg-market-600 transition shadow-lg">Save Product</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Modal -->
+  <div x-show="showMarketModal" class="fixed z-50 inset-0 overflow-y-auto" x-cloak>
+    <div class="flex items-center justify-center min-h-screen px-4">
+      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showMarketModal = false"></div>
+      <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full relative z-10 overflow-hidden">
+        <div class="bg-market-600 px-6 py-4">
+          <h3 class="text-xl font-bold text-white" x-text="editingMarket ? 'Edit Market' : 'Create New Market'"></h3>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-market-700 mb-1">Market Name</label>
+            <input type="text" x-model="marketForm.name" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-market-700 mb-1">Address</label>
+            <input type="text" x-model="marketForm.address" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-market-700 mb-1">Description</label>
+            <textarea x-model="marketForm.description" rows="2" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">Latitude</label>
+              <input type="number" step="0.000001" x-model="marketForm.latitude" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-market-700 mb-1">Longitude</label>
+              <input type="number" step="0.000001" x-model="marketForm.longitude" class="w-full px-4 py-2.5 border-2 border-market-200 rounded-xl focus:border-market-500">
+            </div>
+          </div>
+          <label class="flex items-center p-3 bg-market-50 rounded-xl cursor-pointer hover:bg-market-100 transition">
+            <input type="checkbox" x-model="marketForm.isActive" class="h-5 w-5 text-market-500 rounded">
+            <span class="ml-3 text-sm font-medium text-market-700">Active</span>
+          </label>
+        </div>
+        <div class="bg-market-50 px-6 py-4 flex justify-end space-x-3">
+          <button @click="showMarketModal = false" class="px-5 py-2.5 border-2 border-market-300 text-market-700 rounded-xl font-semibold hover:bg-market-100 transition">Cancel</button>
+          <button @click="saveMarket()" class="px-5 py-2.5 bg-market-500 text-white rounded-xl font-semibold hover:bg-market-600 transition shadow-lg">Save Market</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    function dashboard() {
+      return {
+        API_BASE_URL: 'http://localhost:3000/api/v1',
+        authToken: localStorage.getItem('adminToken') || '',
+        adminName: 'Admin',
+        loading: false,
+        activeTab: 'users',
+        searchQuery: '',
+        
+        stats: { totalUsers: 0, totalProducts: 0, totalRatings: 0, totalMarkets: 0 },
+        users: [], products: [], markets: [], ratings: [], orders: [],
+        filteredUsers: [], filteredProducts: [], filteredRatings: [],
+        showUserModal: false, showProductModal: false, showMarketModal: false, showOrderModal: false,
+        userForm: {}, productForm: {}, marketForm: {}, orderForm: { bonusCardNumber: '', marketId: '', items: [] },
+        catalogSearchQuery: '',
+        userSearchQuery: '',
+        editingUser: null, editingProduct: null, editingMarket: null,
+        
+        // Toast notification
+        toast: { show: false, message: '', type: 'success' },
+        
+        // Pagination
+        currentPage: { users: 1, products: 1, ratings: 1, orders: 1 },
+        itemsPerPage: 10,
+
+        init() {
+          if (!this.authToken) {
+            window.location.href = 'login.html';
+            return;
+          }
+          const userData = localStorage.getItem('adminUser');
+          if (userData) {
+            const user = JSON.parse(userData);
+            this.adminName = user.name + ' ' + user.surname;
+          }
+
+          this.loadAllData();
+        },
+
+        async loadAllData() {
+          this.loading = true;
+          await Promise.all([this.loadUsers(), this.loadProducts(), this.loadMarkets(), this.loadRatings(), this.loadOrders()]);
+          this.updateStats();
+          this.loading = false;
+        },
+
+        async request(endpoint, options = {}) {
+          const url = `${this.API_BASE_URL}${endpoint}`;
+          const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.authToken}`, ...options.headers };
+          try {
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401) { window.location.href = 'login.html'; throw new Error('Unauthorized'); }
+            if (!response.ok) { 
+              const error = await response.json().catch(() => ({ message: 'Request failed' })); 
+              console.error('API Error Response:', error);
+              throw new Error(error.message || JSON.stringify(error)); 
+            }
+            return await response.json();
+          } catch (error) { console.error('API Error:', error); throw error; }
+        },
+
+        async loadUsers() { 
+          try { 
+            const res = await this.request('/users?limit=1000'); 
+            console.log('Dashboard: Users data received:', res);
+            this.users = res.data || (Array.isArray(res) ? res : []); 
+            this.filteredUsers = this.users; 
+            this.updateStats();
+          } catch (e) { console.error('Load Users Failed:', e); this.users = []; this.filteredUsers = []; } 
+        },
+        async loadProducts() { 
+          try { 
+            const res = await this.request('/products?limit=1000'); 
+            this.products = res.data || (Array.isArray(res) ? res : []); 
+            this.filteredProducts = this.products; 
+            this.updateStats();
+          } catch (e) { console.error('Load Products Failed:', e); this.products = []; this.filteredProducts = []; } 
+        },
+        async loadMarkets() { 
+          try { 
+            const res = await this.request('/markets?limit=1000'); 
+            this.markets = res.data || (Array.isArray(res) ? res : []); 
+            this.updateStats();
+          } catch (e) { console.error('Load Markets Failed:', e); this.markets = []; } 
+        },
+        async loadRatings() { 
+          try { 
+            const res = await this.request('/ratings?limit=1000'); 
+            this.ratings = res.data || (Array.isArray(res) ? res : []); 
+            this.filteredRatings = this.ratings; 
+            this.updateStats();
+          } catch (e) { console.error('Load Ratings Failed:', e); this.ratings = []; this.filteredRatings = []; } 
+        },
+        async loadOrders() { 
+          try { 
+            const page = this.currentPage.orders;
+            let query = `/orders?page=${page}&limit=${this.itemsPerPage}`;
+            
+            const res = await this.request(query); 
+            this.orders = res.data || (Array.isArray(res) ? res : []); 
+            // We'll need a way to track total pages from the server response
+            this.serverTotalPages = this.serverTotalPages || {};
+            this.serverTotalPages.orders = res.totalPages || 1;
+            this.updateStats();
+          } catch (e) { console.error('Load Orders Failed:', e); this.orders = []; } 
+        },
+
+        copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then(() => {
+            this.showToast('Copied to clipboard!');
+          }).catch(err => {
+            console.error('Failed to copy: ', err);
+            this.showToast('Failed to copy', 'error');
+          });
+        },
+
+        showToast(message, type = 'success') {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.show = true;
+          setTimeout(() => { this.toast.show = false; }, 3000);
+        },
+
+        // Pagination helpers
+        paginatedUsers() {
+          const start = (this.currentPage.users - 1) * this.itemsPerPage;
+          return this.filteredUsers.slice(start, start + this.itemsPerPage);
+        },
+        paginatedProducts() {
+          const start = (this.currentPage.products - 1) * this.itemsPerPage;
+          return this.filteredProducts.slice(start, start + this.itemsPerPage);
+        },
+        paginatedRatings() {
+          const start = (this.currentPage.ratings - 1) * this.itemsPerPage;
+          return this.filteredRatings.slice(start, start + this.itemsPerPage);
+        },
+        totalPages(type) {
+          if (type === 'orders') return this.serverTotalPages?.orders || 1;
+          const data = type === 'users' ? this.filteredUsers : type === 'products' ? this.filteredProducts : type === 'ratings' ? this.filteredRatings : this.markets;
+          return Math.ceil(data.length / this.itemsPerPage) || 1;
+        },
+        goToPage(type, page) {
+          if (page >= 1 && page <= this.totalPages(type)) {
+            this.currentPage[type] = page;
+            if (type === 'orders') this.loadOrders();
+          }
+        },
+
+        searchUsers() { 
+          const q = (this.searchQuery || '').toLowerCase().trim();
+          if (!Array.isArray(this.users)) return;
+
+          this.filteredUsers = this.users.filter(u => {
+            if (!u) return false;
+            const name = (u.name || '').toLowerCase();
+            const surname = (u.surname || '').toLowerCase();
+            const fullName = `${name} ${surname}`;
+            const phone = (u.phone || '').toLowerCase();
+
+            return (u.id && u.id.toLowerCase().includes(q)) || 
+                   name.includes(q) || 
+                   surname.includes(q) || 
+                   fullName.includes(q) ||
+                   phone.includes(q);
+          }); 
+          this.currentPage.users = 1;
+        },
+        searchProducts() { 
+          const q = this.searchQuery.toLowerCase(); 
+          this.filteredProducts = this.products.filter(p => 
+            p.id.toLowerCase().includes(q) || 
+            p.name.toLowerCase().includes(q) || 
+            (p.sku && p.sku.toLowerCase().includes(q))
+          ); 
+          this.currentPage.products = 1;
+        },
+        searchRatings() {
+          const q = this.searchQuery.toLowerCase();
+          this.filteredRatings = this.ratings.filter(r => 
+            r.id.toLowerCase().includes(q) || 
+            (r.userId && r.userId.toLowerCase().includes(q)) ||
+            (r.productId && r.productId.toLowerCase().includes(q)) ||
+            (r.userName && r.userName.toLowerCase().includes(q)) ||
+            (r.userPhone && r.userPhone.includes(q)) ||
+            (r.productName && r.productName.toLowerCase().includes(q)) ||
+            (r.comment && r.comment.toLowerCase().includes(q))
+          );
+          this.currentPage.ratings = 1;
+        },
+
+        openCreateUserModal() { this.editingUser = null; this.userForm = { name: '', surname: '', phone: '', dateOfBirth: '', password: '', role: 'user' }; this.showUserModal = true; },
+        editUser(user) { this.editingUser = user; this.userForm = { role: user.role }; this.showUserModal = true; },
+        async saveUser() { 
+          try { 
+            if (this.editingUser) { 
+              // UpdateUserDto only accepts 'role' field
+              const updatePayload = { role: this.userForm.role };
+              await this.request(`/users/${this.editingUser.id}`, { method: 'PATCH', body: JSON.stringify(updatePayload) }); 
+            } else { 
+              // CreateUserDto requires all fields
+              const createPayload = {
+                name: this.userForm.name,
+                surname: this.userForm.surname,
+                phone: this.userForm.phone,
+                password: this.userForm.password,
+                dateOfBirth: this.userForm.dateOfBirth
+              };
+              await this.request('/users', { method: 'POST', body: JSON.stringify(createPayload) }); 
+            } 
+            this.showUserModal = false; 
+            await this.loadUsers(); 
+            this.updateStats(); 
+          } catch (e) { alert('Error: ' + e.message); } 
+        },
+        async deleteUser(id) { if (!confirm('Delete this user?')) return; try { await this.request(`/users/${id}`, { method: 'DELETE' }); await this.loadUsers(); this.updateStats(); } catch (e) { alert('Error: ' + e.message); } },
+
+        openCreateProductModal() { this.editingProduct = null; this.productForm = { name: '', sku: '', description: '', price: 0, rewardAmount: 0, isPrivateLabel: false, isNew: false, isActive: true }; this.showProductModal = true; },
+        editProduct(product) { this.editingProduct = product; this.productForm = { name: product.name, sku: product.sku || '', description: product.description || '', price: Number(product.price), rewardAmount: Number(product.rewardAmount), isPrivateLabel: Boolean(product.isPrivateLabel), isNew: Boolean(product.isNew), isActive: Boolean(product.isActive) }; this.showProductModal = true; },
+        async saveProduct() { 
+          try { 
+            // Ensure numbers are properly typed
+            const payload = {
+              name: this.productForm.name,
+              description: this.productForm.description || undefined,
+              sku: this.productForm.sku || undefined,
+              price: Number(this.productForm.price),
+              rewardAmount: Number(this.productForm.rewardAmount),
+              isPrivateLabel: Boolean(this.productForm.isPrivateLabel),
+              isNew: Boolean(this.productForm.isNew),
+              isActive: Boolean(this.productForm.isActive)
+            };
+            if (this.editingProduct) { 
+              await this.request(`/products/${this.editingProduct.id}`, { method: 'PATCH', body: JSON.stringify(payload) }); 
+            } else { 
+              await this.request('/products', { method: 'POST', body: JSON.stringify(payload) }); 
+            } 
+            this.showProductModal = false; 
+            await this.loadProducts(); 
+            this.updateStats(); 
+          } catch (e) { alert('Error: ' + e.message); } 
+        },
+        async deleteProduct(id) { if (!confirm('Delete this product?')) return; try { await this.request(`/products/${id}`, { method: 'DELETE' }); await this.loadProducts(); this.updateStats(); } catch (e) { alert('Error: ' + e.message); } },
+
+        openCreateMarketModal() { this.editingMarket = null; this.marketForm = { name: '', address: '', description: '', latitude: null, longitude: null, isActive: true }; this.showMarketModal = true; },
+        editMarket(market) { this.editingMarket = market; this.marketForm = { name: market.name, address: market.address, description: market.description || '', latitude: market.latitude ? Number(market.latitude) : null, longitude: market.longitude ? Number(market.longitude) : null, isActive: Boolean(market.isActive) }; this.showMarketModal = true; },
+        async saveMarket() { 
+          try { 
+            const payload = {
+              name: this.marketForm.name,
+              address: this.marketForm.address,
+              description: this.marketForm.description || undefined,
+              latitude: this.marketForm.latitude ? Number(this.marketForm.latitude) : undefined,
+              longitude: this.marketForm.longitude ? Number(this.marketForm.longitude) : undefined,
+              isActive: Boolean(this.marketForm.isActive)
+            };
+            if (this.editingMarket) { 
+              await this.request(`/markets/${this.editingMarket.id}`, { method: 'PATCH', body: JSON.stringify(payload) }); 
+            } else { 
+              await this.request('/markets', { method: 'POST', body: JSON.stringify(payload) }); 
+            } 
+            this.showMarketModal = false; 
+            await this.loadMarkets(); 
+            this.updateStats(); 
+          } catch (e) { alert('Error: ' + e.message); } 
+        },
+        async deleteMarket(id) { if (!confirm('Delete this market?')) return; try { await this.request(`/markets/${id}`, { method: 'DELETE' }); await this.loadMarkets(); this.updateStats(); } catch (e) { alert('Error: ' + e.message); } },
+
+        async deleteRating(id) { if (!confirm('Delete this rating?')) return; try { await this.request(`/ratings/${id}`, { method: 'DELETE' }); await this.loadRatings(); this.updateStats(); } catch (e) { alert('Error: ' + e.message); } },
+
+        openCreateOrderModal() { this.orderForm = { bonusCardNumber: '', marketId: '', items: [] }; this.catalogSearchQuery = ''; this.userSearchQuery = ''; },
+        
+        filteredUsersForOrder() {
+          const q = (this.userSearchQuery || '').toLowerCase().trim();
+          if (!q || q.length < 2) return [];
+          
+          if (!Array.isArray(this.users)) {
+            console.warn('Dashboard: this.users is not an array', this.users);
+            return [];
+          }
+
+          return this.users.filter(u => {
+            if (!u) return false;
+            const name = (u.name || '').toLowerCase();
+            const surname = (u.surname || '').toLowerCase();
+            const fullName = `${name} ${surname}`;
+            const phone = (u.phone || '').toLowerCase();
+            const cardNum = (u.bonusCard && u.bonusCard.cardNumber) ? u.bonusCard.cardNumber.toLowerCase() : '';
+            
+            return name.includes(q) || 
+                   surname.includes(q) || 
+                   fullName.includes(q) ||
+                   phone.includes(q) ||
+                   cardNum.includes(q);
+          }).filter(u => u.bonusCard && u.bonusCard.cardNumber).slice(0, 10);
+        },
+
+        filteredCatalogProducts() {
+          const q = this.catalogSearchQuery.toLowerCase();
+          if (!q) return this.products.slice(0, 12);
+          return this.products.filter(p => 
+            p.name.toLowerCase().includes(q) || 
+            (p.sku && p.sku.toLowerCase().includes(q))
+          ).slice(0, 20);
+        },
+
+        addProductToOrder(product) {
+          const existing = this.orderForm.items.find(item => item.productId === product.id);
+          if (existing) {
+            existing.quantity++;
+          } else {
+            this.orderForm.items.push({
+              productId: product.id,
+              name: product.name,
+              price: Number(product.price),
+              rewardAmount: Number(product.rewardAmount || 0),
+              quantity: 1
+            });
+          }
+        },
+
+        updateOrderItemQuantity(index, delta) {
+          const item = this.orderForm.items[index];
+          item.quantity += delta;
+          if (item.quantity <= 0) {
+            this.removeOrderItem(index);
+          }
+        },
+
+        removeOrderItem(index) { this.orderForm.items.splice(index, 1); },
+        
+        calculateOrderTotal() {
+          return this.orderForm.items.reduce((total, item) => {
+            return total + (item.price * item.quantity);
+          }, 0);
+        },
+
+        calculateOrderReward() {
+          return this.orderForm.items.reduce((total, item) => {
+            return total + item.rewardAmount;
+          }, 0);
+        },
+        async saveOrder() {
+          try {
+            const payload = {
+              bonusCardNumber: this.orderForm.bonusCardNumber,
+              marketId: this.orderForm.marketId,
+              items: this.orderForm.items.map(it => ({
+                productId: it.productId,
+                quantity: Number(it.quantity)
+              }))
+            };
+            await this.request('/orders', { method: 'POST', body: JSON.stringify(payload) });
+            this.openCreateOrderModal();
+            this.showToast('Order created successfully!');
+          } catch (e) { alert('Error creating order: ' + e.message); }
+        },
+
+        getUserName(userId) { const u = this.users.find(x => x.id === userId); return u ? `${u.name} ${u.surname}` : 'Unknown'; },
+        getProductName(productId) { const p = this.products.find(x => x.id === productId); return p ? p.name : 'Unknown'; },
+        getMarketName(marketId) { const m = this.markets.find(x => x.id === marketId); return m ? m.name : 'Unknown'; },
+        formatDate(date) { return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); },
+        updateStats() { this.stats = { totalUsers: this.users.length, totalProducts: this.products.length, totalRatings: this.ratings.length, totalMarkets: this.markets.length }; },
+        logout() { localStorage.removeItem('adminToken'); localStorage.removeItem('adminUser'); window.location.href = 'login.html'; }
+      };
+    }
+  </script>
+    <!-- Toast Notification -->
+    <div x-show="toast.show" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-4"
+         class="fixed bottom-8 right-8 z-[100]"
+         style="display: none;">
+      <div :class="toast.type === 'success' ? 'bg-market-600' : 'bg-red-600'" 
+           class="text-white px-6 py-3 rounded-xl shadow-2xl flex items-center space-x-3">
+        <i :class="toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'" class="fas"></i>
+        <span class="font-semibold" x-text="toast.message"></span>
+      </div>
+    </div>
+  </body>
+</html>

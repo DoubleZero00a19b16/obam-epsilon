@@ -29,13 +29,7 @@ export class CreateProductDto {
   @IsOptional()
   sku?: string;
 
-  @ApiProperty({
-    example: true,
-    description: 'Whether users can rate this product',
-    default: true,
-  })
-  @IsBoolean()
-  allowedRating: boolean;
+
 
   @ApiProperty({
     example: 0.10,

@@ -34,7 +34,10 @@ export class Rating {
   score: number;
 
   @Column({ type: 'text', nullable: true })
-  comment: string;
+  comment: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  reason: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -43,16 +46,16 @@ export class Rating {
   @OneToMany(() => RewardTransaction, transaction => transaction.rating)
   rewardTransactions: RewardTransaction[];
 
-  @Column({ 
+  @Column({
     type: 'int',
     unsigned: true,
     comment: 'Reward points earned for this rating (10 or 30)'
   })
   rewardPoints: number;
 
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     comment: 'Bonus money earned for this rating (in dollars)'
   })

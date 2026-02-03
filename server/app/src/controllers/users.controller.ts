@@ -3,10 +3,11 @@ import { UpdateUserDto } from '@/dtos/update-user.dto';
 import { AdminGuard } from '@/guards/admin.guard';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { UsersService } from '@/services/users.service';
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiBody, ApiParam, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { v5 as uuidv5 } from "uuid"
+import { PaginationParamsDto } from '@/dtos/pagination.dto';
 
 @Controller('users')
 @ApiTags("users")
@@ -16,7 +17,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService
   ) { }
-  
+
   @UseGuards(AdminGuard)
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
@@ -30,18 +31,20 @@ export class UsersController {
       return errorMessage;
     }
   }
-  
+
   @UseGuards(AdminGuard)
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @ApiOperation({ summary: 'Get all users with pagination' })
+  @ApiResponse({ status: 200, description: 'Return paginated users' })
+  findAll(@Query() query: PaginationParamsDto) {
+    return this.usersService.findAll(query);
   }
-  
+
   @Get('/me')
   getMe() {
     return this.usersService.getMe();
   }
-  
+
   @UseGuards(AdminGuard)
   @Get(':id')
   async findOne(@Param('id') id: string) {
@@ -63,7 +66,7 @@ export class UsersController {
   update(@Param('id') id: UUID, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
-  
+
   @UseGuards(AdminGuard)
   @Delete(':id')
   remove(@Param('id') id: string) {

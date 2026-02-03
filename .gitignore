@@ -1,3 +1,8 @@
 epsilon-secure-key.pem
 **/.env
 docker-compose.yml
+**/node_modules
+product_clusters_final.json
+server_log.txt
+test_e2e.log
+test_output.txt

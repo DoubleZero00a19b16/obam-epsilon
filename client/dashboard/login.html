@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBA Market - Admin Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            market: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            },
+            accent: {
+              50: '#fefce8',
+              100: '#fef9c3',
+              200: '#fef08a',
+              300: '#fde047',
+              400: '#facc15',
+              500: '#eab308',
+              600: '#ca8a04',
+              700: '#a16207',
+              800: '#854d0e',
+              900: '#713f12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .gradient-bg {
+      background: linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%);
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="h-full gradient-bg" x-data="loginApp()" x-cloak>
+  
+  <div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    
+    <!-- Logo and Title -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md text-center">
+      <div class="mx-auto w-24 h-24 bg-accent-400 rounded-full flex items-center justify-center shadow-xl">
+        <i class="fas fa-store text-market-800 text-4xl"></i>
+      </div>
+      <h1 class="mt-6 text-4xl font-extrabold text-white">OBA Market</h1>
+      <p class="mt-2 text-lg text-market-200">Admin Dashboard</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="glass-effect py-8 px-6 shadow-2xl rounded-2xl sm:px-10">
+        
+        <!-- Error Message -->
+        <div x-show="errorMessage" x-cloak class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-circle text-red-500 mr-3"></i>
+            <p class="text-red-700 text-sm" x-text="errorMessage"></p>
+          </div>
+        </div>
+
+        <!-- Login Form -->
+        <form @submit.prevent="login()" class="space-y-6">
+          
+          <!-- Phone Input -->
+          <div>
+            <label for="phone" class="block text-sm font-semibold text-market-800">
+              <i class="fas fa-phone mr-2 text-market-600"></i>Phone Number
+            </label>
+            <div class="mt-2">
+              <input 
+                id="phone" 
+                type="tel" 
+                x-model="phone" 
+                required
+                placeholder="+994501234567"
+                class="appearance-none block w-full px-4 py-3 border-2 border-market-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-market-500 focus:border-market-500 transition-all"
+              >
+            </div>
+          </div>
+
+          <!-- Password Input -->
+          <div>
+            <label for="password" class="block text-sm font-semibold text-market-800">
+              <i class="fas fa-lock mr-2 text-market-600"></i>Password
+            </label>
+            <div class="mt-2 relative">
+              <input 
+                id="password" 
+                :type="showPassword ? 'text' : 'password'" 
+                x-model="password" 
+                required
+                placeholder="Enter your password"
+                class="appearance-none block w-full px-4 py-3 border-2 border-market-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-market-500 focus:border-market-500 transition-all pr-12"
+              >
+              <button 
+                type="button" 
+                @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 pr-4 flex items-center text-market-500 hover:text-market-700"
+              >
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div>
+            <button 
+              type="submit" 
+              :disabled="loading"
+              class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-market-900 bg-accent-400 hover:bg-accent-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <template x-if="loading">
+                <i class="fas fa-spinner fa-spin mr-3"></i>
+              </template>
+              <span x-text="loading ? 'Signing in...' : 'Sign In to Dashboard'"></span>
+            </button>
+          </div>
+        </form>
+
+        <!-- Admin Notice -->
+        <div class="mt-6 text-center">
+          <div class="bg-accent-50 border border-accent-200 rounded-xl p-4">
+            <i class="fas fa-shield-alt text-accent-600 text-xl mb-2"></i>
+            <p class="text-sm text-market-700 font-medium">Admin Access Only</p>
+            <p class="text-xs text-market-600 mt-1">This dashboard is restricted to authorized administrators.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-8 text-center">
+      <p class="text-market-200 text-sm">© 2024 OBA Market. All rights reserved.</p>
+    </div>
+
+  </div>
+
+  <script>
+    function loginApp() {
+      return {
+        API_BASE_URL: 'http://localhost:3000/api/v1',
+        phone: '',
+        password: '',
+        showPassword: false,
+        loading: false,
+        errorMessage: '',
+
+        async login() {
+          this.errorMessage = '';
+          this.loading = true;
+
+          try {
+            // Step 1: Authenticate
+            const authResponse = await fetch(`${this.API_BASE_URL}/auth/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                phone: this.phone,
+                password: this.password
+              })
+            });
+
+            if (!authResponse.ok) {
+              const error = await authResponse.json().catch(() => ({}));
+              throw new Error(error.message || 'Invalid credentials');
+            }
+
+            const authData = await authResponse.json();
+            const token = authData.access_token || authData.token || authData.accessToken;
+
+            if (!token) {
+              throw new Error('No token received from server');
+            }
+
+            // Step 2: Verify user is admin
+            const meResponse = await fetch(`${this.API_BASE_URL}/users/me`, {
+              headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (!meResponse.ok) {
+              throw new Error('Failed to verify user role');
+            }
+
+            const userData = await meResponse.json();
+            
+            // Check if user is admin
+            if (userData.role !== 'admin') {
+              throw new Error('Access denied. Admin privileges required.');
+            }
+
+            // Step 3: Store token and redirect
+            localStorage.setItem('adminToken', token);
+            localStorage.setItem('adminUser', JSON.stringify(userData));
+            
+            window.location.href = 'index.html';
+
+          } catch (error) {
+            console.error('Login error:', error);
+            this.errorMessage = error.message || 'Login failed. Please try again.';
+          } finally {
+            this.loading = false;
+          }
+        }
+      };
+    }
+  </script>
+</body>
+</html>

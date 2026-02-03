@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { Rating } from '../entities/rating.entity';
@@ -11,6 +11,7 @@ import { ProductCredit } from '../entities/product-credit.entity';
 import { MyOrdersResponseDto, ProductInOrderDto, GetMyOrdersQueryDto } from '../dtos/order.dto';
 import { CreateOrderDto, OrderCreatedResponseDto } from '../dtos/create-order.dto';
 import { ClsService } from 'nestjs-cls';
+import { PaginatedResponseDto, PaginationParamsDto } from '@/dtos/pagination.dto';
 
 // 2% cashback on purchases
 const PURCHASE_CASHBACK_RATE = 0.02;
@@ -120,14 +121,12 @@ export class OrdersService {
 
   //     // 5. Calculate priority-based credit allocation
   //     // Separate PL and normal products
-  //     const rateableProducts = orderItemsData.filter(
-  //       item => item.product.allowedRating === true  // ✅ PRIMARY FILTER
-  //     );
+  //      const rateableProducts = orderItemsData; // All products are potentially rateable if they have rewards
 
   //     const plProducts = rateableProducts.filter(
   //       item => item.product.isPrivateLabel === true
   //     );
-  //     const normalProducts = orderItemsData.filter(item => (!item.product.isPrivateLabel && item.product.allowedRating));
+  //      const normalProducts = orderItemsData.filter(item => (!item.product.isPrivateLabel));
 
   //     // Sort by rating count (ascending - fewer ratings first)
   //     const sortByRatingCount = (items: typeof orderItemsData) => {
@@ -293,11 +292,11 @@ export class OrdersService {
         throw new BadRequestException('Invalid bonus card');
       }
 
-      if (bonusCard.userId !== user.id) {
-        throw new ForbiddenException('Bonus card does not belong to user');
-      }
+      // if (bonusCard.userId !== user.id) {
+      //   throw new ForbiddenException('Bonus card does not belong to user');
+      // }
 
-      const userId = user.id;
+      const userId = bonusCard.userId;
 
       // 2. Verify all products exist and get their prices
       const productIds = items.map(item => item.productId);
@@ -370,7 +369,7 @@ export class OrdersService {
 
         // Check if this product has a static reward amount
         // AND if rating is allowed for this product
-        if (itemData.product.allowedRating && Number(itemData.product.rewardAmount) > 0) {
+        if (Number(itemData.product.rewardAmount) > 0) {
           const rewardAmount = Number(itemData.product.rewardAmount);
 
           // Calculate points: 10 points = $0.01 => 1 point = $0.001
@@ -416,7 +415,7 @@ export class OrdersService {
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,
           isPrivateLabel: item.product.isPrivateLabel,
-          allowedRating: item.product.allowedRating, // Frontend can check if product is rateable
+          allowedRating: true, // Always allowed now, subject to purchase verification
           rewardAmount: Number(item.product.rewardAmount),
         })),
       };
@@ -431,26 +430,76 @@ export class OrdersService {
 
 
   /**
-   * Get user's order history with products sorted by PL status and rating count
-   * Simplified - no status filter needed
+   * Admin: Get all orders with pagination
    */
-  async getMyOrders(query: GetMyOrdersQueryDto): Promise<MyOrdersResponseDto[]> {
-    const { limit = 50, offset = 0 } = query;
+  async findAll(params: GetMyOrdersQueryDto): Promise<PaginatedResponseDto<MyOrdersResponseDto>> {
+    const { page = 1, limit = 10, startDate, endDate } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (startDate && endDate) {
+      where.createdAt = Between(new Date(startDate), new Date(endDate));
+    } else if (startDate) {
+      where.createdAt = MoreThanOrEqual(new Date(startDate));
+    } else if (endDate) {
+      where.createdAt = LessThanOrEqual(new Date(endDate));
+    }
+
+    const [orders, total] = await this.ordersRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: skip,
+    });
+
+    const enrichedOrders = await this.enrichOrders(orders, ''); // Empty userId for admin bypass
+
+    return {
+      data: enrichedOrders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
+
+  /**
+   * Get user's order history with products sorted by PL status and rating count
+   */
+  async getMyOrders(query: GetMyOrdersQueryDto): Promise<PaginatedResponseDto<MyOrdersResponseDto>> {
+    const { page = 1, limit = 50, startDate, endDate } = query;
+    const skip = (page - 1) * limit;
 
     const user = this.clsService.get<User>('user');
     if (!user) throw new ForbiddenException('User not identified');
     const userId = user.id;
 
-    // Get all orders for the user
-    const orders = await this.ordersRepository
-      .createQueryBuilder('order')
-      .where('order.userId = :userId', { userId })
-      .orderBy('order.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit)
-      .getMany();
+    const where: any = { userId };
+    if (startDate && endDate) {
+      where.createdAt = Between(new Date(startDate), new Date(endDate));
+    } else if (startDate) {
+      where.createdAt = MoreThanOrEqual(new Date(startDate));
+    } else if (endDate) {
+      where.createdAt = LessThanOrEqual(new Date(endDate));
+    }
 
-    return this.enrichOrders(orders, userId);
+    // Get all orders for the user
+    const [orders, total] = await this.ordersRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: skip,
+      take: limit,
+    });
+
+    const enrichedOrders = await this.enrichOrders(orders, userId);
+
+    return {
+      data: enrichedOrders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   /**
@@ -591,7 +640,7 @@ export class OrdersService {
           ratingCount: item.product.ratingCount,
           averageRating: Number(item.product.averageRating),
           quantity: item.quantity,
-          rateable: item.product.allowedRating,
+          rateable: true, // Always true if in order
           totalPrice: Number(item.totalPrice),
           hasUserRated: !!userRating,
           rewardAmount: Number(item.product.rewardAmount),
@@ -629,8 +678,9 @@ export class OrdersService {
     if (!user) throw new ForbiddenException('User not identified');
     const userId = user.id;
 
-    // Get all completed orders
-    const orders = await this.getMyOrders({});
+    // Get all completed orders (first page)
+    const response = await this.getMyOrders({ limit: 100 });
+    const orders = response.data;
 
     // Flatten and filter to only unrated products
     const unratedProducts: ProductInOrderDto[] = [];

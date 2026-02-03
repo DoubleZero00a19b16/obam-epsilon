@@ -22,49 +22,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-
-def az_lower(text: str) -> str:
-    """
-    Azerbaijani/Turkish-aware lowercasing.
-
-    Standard Python str.lower() breaks on İ (U+0130): it emits 'i' + a
-    combining-dot-above (U+0307), which silently corrupts every subsequent
-    substring or regex match.  This function handles the two special cases
-    before falling back to the generic lower():
-
-        İ  (U+0130, Latin Capital Letter I With Dot Above)  ->  i
-        I  (U+0049, plain Latin Capital I)                  ->  ı  (dotless small i)
-
-    The trailing replace('\u0307', '') is a safety net that removes any
-    stray combining dots that might survive from other code-paths.
-    """
-    text = text.replace('\u0130', 'i')   # İ  -> i
-    text = text.replace('I', '\u0131')   # I  -> ı  (dotless small i)
-    text = text.lower()
-    text = text.replace('\u0307', '')    # strip leftover combining dot above
-    return text
-
-
-def az_lower_review(text: str) -> str:
-    """
-    az_lower() + best-effort correction for a common user typo.
-
-    Users sometimes type a bare  I  (U+0049) where they mean  İ  (U+0130).
-    After az_lower() that bare I becomes ı, so "İY" (smell) typed as "IY"
-    ends up as "ıy" and misses every keyword.  The two targeted fixes:
-
-        \\bıy\\b   →  iy     ("IY"  mistyped for "İY")
-        \\bıyi\\b  →  iyi    ("Iyi" mistyped for "İyi")
-
-    Only word-boundary matches are corrected, so legitimate ı words
-    (e.g. "ıyın", "sıxışdırmaq") are left untouched.
-    """
-    out = az_lower(text)
-    out = re.sub(r'\bıy\b',  'iy',  out)   # IY  → iy
-    out = re.sub(r'\bıyi\b', 'iyi', out)   # Iyi → iyi
-    return out
-
-
 class AzerbaijaniAspectClustering:
     def __init__(self, model_name='paraphrase-multilingual-MiniLM-L12-v2'):
         """Initialize the clustering model for product review analysis (in-store purchases only)."""
@@ -122,23 +79,14 @@ class AzerbaijaniAspectClustering:
             },
             'iy': {
                 'keywords': [
-                    # --- standalone smell words (word-boundary checked) ---
+                    # Standalone words (with word boundary checking)
                     'iy', 'iyi', 'iyir',
-
-                    # --- "iyi + verb/adjective" phrases (the key gap that was missing) ---
+                    # Specific smell phrases
                     'iyi pis', 'iyi çox', 'iyi dözülməz',
-                    'iyi gəlir', 'iyi verir', 'iyi var',
-                    'iyi gelir', 'iyi verir',          # common typo variants
-
-                    # --- "iy + verb/adjective" phrases ---
-                    'iy gəlir', 'iy verir', 'iy var',
-
-                    # --- "[adjective] iy" compounds ---
-                    'pis iy', 'güclü iy', 'kəskin iy',
+                    'pis iy', 'güclü iy', 'kəskin iy', 
                     'iyrənc iy', 'kimyəvi iy', 'plastik iy',
                     'xoşagəlməz iy', 'qəribə iy',
-
-                    # --- qoxu (smell / scent) variants ---
+                    'iy gəlir', 'iy verir', 'iy var',
                     'qoxu', 'qoxusu', 'qoxur',
                     'pis qoxu', 'qəribə qoxu', 'kimyəvi qoxu'
                 ],
@@ -225,7 +173,7 @@ class AzerbaijaniAspectClustering:
                     'qablaşdırma', 'qablaşdırılıb',
                     'qab', 'qab üzərində',
                     'paket', 'paketi', 'paketdə',
-                    'quto', 'qutuda',
+                    'qutu', 'qutuda',
                     'zədə', 'zədəli', 'zədələnib',
                     'sınıq gəldi', 'qırılıb', 'qırılmış',
                     'əzilmiş', 'cırılmış',
@@ -276,8 +224,7 @@ class AzerbaijaniAspectClustering:
         
     def detect_primary_aspect(self, review):
         """Detect the primary complaint aspect in a review using improved keyword matching."""
-        # ── Azerbaijani-aware lowercasing + İ/I typo correction ──
-        review_lower = az_lower_review(review)
+        review_lower = review.lower()
         aspect_scores = {}
         
         for aspect, data in self.problem_keywords.items():
@@ -545,14 +492,14 @@ if __name__ == "__main__":
         "Eyni məhsulu başqa yerdə ucuz almışam",
         "Qiymət uyğun deyil, ucuz deyil",
         "Bahalı məhsul, bu qədər pula dəyməz",
-        "Sadəcə qiyméti baha olduğu üçün bəyənmédim",
+        "Sadəcə qiyməti baha olduğu üçün bəyənmədim",
         "Qiymət çox yüksək qalır",
         "Bu məhsul bu qiymətə layiq deyil",
         "Çox bahadır, almağa dəyməz",
         "Digər brendlərdən bahadır, səbəbini anlamıram",
-        "Qiyméti iki misli artıblar, ədalətsizdir",
+        "Qiyməti iki misli artıblar, ədalətsizdir",
         
-        # Quality complaints (Keyfiyyět problemi) - 20 samples
+        # Quality complaints (Keyfiyyət problemi) - 20 samples
         "Məhsulun keyfiyyəti pis idi, işləmir",
         "Keyfiyyət çox zəifdir, pozulub",
         "Məhsul xarabdır, istifadə edə bilmirəm",
@@ -583,10 +530,10 @@ if __name__ == "__main__":
         "Dadı təbii deyil, qoruyucu maddələrin dadı gəlir",
         "Heç ləzzət almadım, dad çox pisdir",
         "Ət məhsulunun dadı köhnədir",
-        "Dadı şəkərden başqa heç nə hiss olunmur",
+        "Dadı şəkərdən başqa heç nə hiss olunmur",
         "Çox şordu, yeməyə dəyməz",
         "Dadı ümumiyyətlə yoxdur, ləzzətsiz",
-        "Çay dadı verir, suyun dadını verir",
+        "Çay dadı vermir, suyun dadını verir",
         "Meyvənin dadı yoxdur, yetişməmiş",
         "Qida əlavələrinin dadı çox güclüdür",
         "Dad balansı pis, çox acıdır",
@@ -630,7 +577,7 @@ if __name__ == "__main__":
         "Dizayn başqadır, təsvirdən fərqli",
         "Məhsulun görünüşü pis, köhnə görünür",
         "Rəngi solğundur, şəkildəki parlaq deyil",
-        "Model fərqlidir, istédiyim deyil",
+        "Model fərqlidir, istədiyim deyil",
         "Şəkildəki dizaynla heç oxşarlığı yoxdur",
         "Görünüşü ucuz, plastik görünür",
         "Rəng tonları tamamilə fərqlidir",
@@ -652,10 +599,10 @@ if __name__ == "__main__":
         "Tərkibində allergen maddələr var, yazmayıblar",
         "Tərkib məlumatı düzgün deyil",
         "Qida əlavələri çoxdur, təbii deyil",
-        "Tərkibinde zərərli maddələr olduğunu gördüm",
+        "Tərkibində zərərli maddələr olduğunu gördüm",
         "E kodu çox, sağlamlığa ziyanlıdır",
-        "Tərkibi etiketdə göstərilméyib",
-        "Kimyəvi maddələr çoxdur tərkibinde",
+        "Tərkibi etiketdə göstərilməyib",
+        "Kimyəvi maddələr çoxdur tərkibində",
         "Tərkibdəki materiallar keyfiyyətsizdir",
         
         # Expiration date complaints (Tarix problemi) - 10 samples
@@ -667,56 +614,56 @@ if __name__ == "__main__":
         "Bir həftəyə tarixi bitir, təzə deyil",
         "Məhsul xarab olub, tarixi keçib",
         "Köhnə məhsul, istifadə tarixi bitib",
-        "Tarix etiketinde oxunmur, köhnə görünür",
+        "Tarix etiketində oxunmur, köhnə görünür",
         "Son istifadə müddəti keçmiş məhsul",
         
         # Packaging complaints (Qablaşdırma problemi) - 12 samples
-        "Qablaşdırma zédəli idi, məhsul sınıq gəldi",
+        "Qablaşdırma zədəli idi, məhsul sınıq gəldi",
         "Paket açılmış vəziyyətdə idi",
         "Qablaşdırma zəif, məhsul qorunmur",
-        "Quto əzilmiş, içəridəki məhsul zédelandib",
+        "Qutu əzilmiş, içəridəki məhsul zədələnib",
         "Qablaşdırma pis, məhsul qırılıb",
         "Paket cırılmışdı, məhsul bayıra çıxmışdı",
         "Qablaşdırma keyfiyyətsiz, sınıq idi",
         "Şüşə qırılmış vəziyyətdə idi, qablaşdırma zəif",
-        "Qab üzərinде çatlar var, zédélidir",
+        "Qab üzərində çatlar var, zədəlidir",
         "Plastik qablaşdırma sınıb, məhsul çıxıb",
-        "Qablaşdırma açılmış idi, téhlükəsiz deyil",
-        "Qab zédéli idi, içéridə héç şey qarışıb",
+        "Qablaşdırma açılmış idi, təhlükəsiz deyil",
+        "Qab zədəli idi, içəridə hər şey qarışıb",
         
         # Label/information complaints (Etiket problemi) - 8 samples
         "Etiketdə məlumat yoxdur, nə olduğu bəlli deyil",
-        "Télimat azérbaycanca deyil, başa düşülmür",
+        "Təlimat azərbaycanca deyil, başa düşülmür",
         "Etiket cırılmış, məlumatları oxumaq olmur",
-        "İstifadə télimatı verilméyib",
-        "Etiketdə térkib haqqında məlumat yoxdur",
-        "Qiymét etiketi yapışmayıb, yoxdur",
-        "Etiket sáhvdir, başqa məhsulun etiketi",
+        "İstifadə təlimatı verilməyib",
+        "Etiketdə tərkib haqqında məlumat yoxdur",
+        "Qiymət etiketi yapışmayıb, yoxdur",
+        "Etiket səhvdir, başqa məhsulun etiketi",
         "Məlumat etiketində oxunmayan yazılar var",
         
         # Additional mixed complaints - 10 samples
-        "Məhsul çox pis qablaşdırılıb və qiyméti dé baha",
-        "Keyfiyyéti zəif, üstélík ölçü dé uyğun deyil",
+        "Məhsul çox pis qablaşdırılıb və qiyməti də baha",
+        "Keyfiyyəti zəif, üstəlik ölçü də uyğun deyil",
         "Dad pisdir və miqdar da az gəlib",
-        "Qiymét baha, amma keyfiyyét héç yaxşı deyil",
-        "Görünüşü şəkildén férqli vé qablaşdırması da zédéli",
-        "Ölçü kiçik gəldi vé materialı da keyfiyyétsiz",
-        "Son istifadé tarixi yaxın vé dadı da pis",
-        "Miqdar az vé térkibi dé tébii deyil",
-        "Keyfiyyét pis, pozulub vé işlémir",
-        "Réngi férqli vé material dé keyfiyyétsiz",
+        "Qiymət baha, amma keyfiyyət heç yaxşı deyil",
+        "Görünüşü şəkildən fərqli və qablaşdırması da zədəli",
+        "Ölçü kiçik gəldi və materialı da keyfiyyətsiz",
+        "Son istifadə tarixi yaxın və dadı da pis",
+        "Miqdar az və tərkibi də təbii deyil",
+        "Keyfiyyət pis, pozulub və işləmir",
+        "Rəngi fərqli və material də keyfiyyətsiz",
         
-        # Ambiguous/Other complaints (should go to Digér) - 10 samples
-        "Béyənmédim",
+        # Ambiguous/Other complaints (should go to Digər) - 10 samples
+        "Bəyənmədim",
         "Yaxşı deyil",
-        "Problemli méhsuldur",
+        "Problemli məhsuldur",
         "Narazıyam",
-        "Pis tácríbé oldu",
-        "Gözləntilérimi doğrultmadı",
+        "Pis təcrübə oldu",
+        "Gözləntilərimi doğrultmadı",
         "Razı qalmadım",
-        "Tövsiyé etmirəm",
-        "Ümumiyyétlé",
-        "Héç béyənmédim"
+        "Tövsiyə etmirəm",
+        "Ümumiyyətlə",
+        "Heç bəyənmədim"
     ]
     
     # Run keyword-based clustering (RECOMMENDED)
@@ -751,9 +698,6 @@ if __name__ == "__main__":
     test_cases = [
         ("iy", "İy problemi"),
         ("İyi pis idi", "İy problemi"),
-        ("İyi verir", "İy problemi"),          # ← the case that was broken
-        ("İyi gəlir", "İy problemi"),          # ← also now covered
-        ("İY GƏLİR", "İy problemi"),           # ← all-caps İ variant
         ("Ümumiyyətlə", "Digər"),
         ("dad", "Dad problemi"),
         ("Dadı yoxdur", "Dad problemi"),
@@ -766,7 +710,7 @@ if __name__ == "__main__":
     ]
     
     for test_input, expected_output in test_cases:
-        test_result = cluster_azerbaijani_reviews([test_input, test_input], method='keyword')
+        test_result = cluster_azerbaijani_reviews([test_input], method='keyword')
         test_dict = json.loads(test_result)
         if test_dict['clusters']:
             actual_output = list(test_dict['clusters'].values())[0]['cluster_label']

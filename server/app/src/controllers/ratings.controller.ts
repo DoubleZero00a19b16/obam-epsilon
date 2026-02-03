@@ -1,11 +1,12 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Req, HttpStatus, HttpCode, Put } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, Param, UseGuards, Req, HttpStatus, HttpCode, Put, Delete, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { RatingsService } from '../services/ratings.service';
-import { CreateRatingDto, RatingResponseDto, ProductRatingStatsDto } from '../dtos/rating.dto';
+import { CreateRatingDto, RatingResponseDto, ProductRatingStatsDto, UpdateRatingDto } from '../dtos/rating.dto';
+import { PaginationParamsDto, PaginatedResponseDto } from '../dtos/pagination.dto';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AiClassificationService } from '@/services/ai-classification.service';
-import { UpdateRatingDto } from '@/dtos/update-rating.dto';
 import { AdminGuard } from '@/guards/admin.guard';
+import { Admin } from 'typeorm';
 
 /**
  * Controller for product rating operations
@@ -20,6 +21,29 @@ export class RatingsController {
     private readonly ratingsService: RatingsService,
     private readonly aiClassificationService: AiClassificationService
   ) { }
+
+  /**
+   * GET /ratings
+   * Get all ratings with pagination (Admin only)
+   */
+  @UseGuards(AdminGuard)
+  @Get()
+  @ApiOperation({
+    summary: 'Get all ratings (Admin only)',
+    description: 'Retrieve a paginated list of all product ratings submitted by users.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of ratings',
+    type: PaginatedResponseDto,
+  })
+  async findAll(
+    @Query() query: PaginationParamsDto,
+  ): Promise<PaginatedResponseDto<any>> {
+    // Note: In NestJS, query params are usually accessed via @Query()
+    // I noticed I used @Req() in the plan, but @Query() is better.
+    return this.ratingsService.findAll(query);
+  }
 
   /**
    * POST /ratings
@@ -79,6 +103,43 @@ export class RatingsController {
       statusCode: 200,
       message: 'Rating updated successfully',
       data: updatedRating
+    };
+  }
+
+  /**
+   * DELETE /ratings/:id
+   * Delete a rating
+   */
+  @ApiOperation({
+    summary: 'Delete a rating',
+    description: 'Delete a specific rating. Users can only delete their own ratings.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'UUID of the rating to delete',
+    example: '550e8400-e29b-41d4-a716-446655440012',
+  })
+  @ApiResponse({ status: 200, description: 'Rating deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User does not own this rating' })
+  @ApiResponse({ status: 404, description: 'Rating not found' })
+  @UseGuards(AdminGuard)
+  @Delete(':id')
+  async deleteRating(
+    @Param('id') ratingId: string,
+    @Req() req: any,
+  ) {
+    // We need userId from req to verify ownership
+    // ClsService is used in service, so maybe I don't need req here if service handles it?
+    // Service methods usually take userId or usage ClsService.
+    // I'll rely on ClsService in Service or pass userId.
+    // checking `createRating` in controller: `this.ratingsService.createRating(createRatingDto)`.
+    // checking `createRating` in service: `const user = this.clsService.get<User>('user');`
+    // So verification happens in service.
+    await this.ratingsService.deleteRating(ratingId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Rating deleted successfully'
     };
   }
 

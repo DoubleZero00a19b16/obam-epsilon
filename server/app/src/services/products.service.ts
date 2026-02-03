@@ -5,6 +5,7 @@ import { Rating } from '@/entities/rating.entity';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PaginatedResponseDto, PaginationParamsDto } from '@/dtos/pagination.dto';
 
 @Injectable()
 export class ProductsService {
@@ -22,10 +23,23 @@ export class ProductsService {
     return await this.productRepository.save(product);
   }
 
-  async findAll() {
-    const products: Product[] = await this.productRepository.find();
+  async findAll(params: PaginationParamsDto): Promise<PaginatedResponseDto<Product>> {
+    const { page = 1, limit = 10 } = params;
+    const skip = (page - 1) * limit;
 
-    return products
+    const [products, total] = await this.productRepository.findAndCount({
+      take: limit,
+      skip: skip,
+      order: { createdAt: 'DESC' }
+    });
+
+    return {
+      data: products,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   async findOne(id: string): Promise<Product> {

@@ -1,6 +1,7 @@
-import { IsOptional, IsEnum, IsInt, Min } from 'class-validator';
+import { IsInt, Min, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { PaginationParamsDto, PaginatedResponseDto } from './pagination.dto';
 
 export class ProductInOrderDto {
   @ApiProperty({ description: 'Product ID', example: '550e8400-e29b-41d4-a716-446655440012' })
@@ -67,28 +68,14 @@ export class MyOrdersResponseDto {
   products: ProductInOrderDto[];
 }
 
-export class GetMyOrdersQueryDto {
-  @ApiPropertyOptional({
-    description: 'Maximum number of orders to return',
-    example: 50,
-    default: 50,
-  })
+export class GetMyOrdersQueryDto extends PaginationParamsDto {
+  @ApiPropertyOptional({ description: 'Filter by start date (ISO8601)', example: '2024-01-01T00:00:00.000Z' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  limit?: number;
+  startDate?: string;
 
-  @ApiPropertyOptional({
-    description: 'Number of orders to skip for pagination',
-    example: 0,
-    default: 0,
-  })
+  @ApiPropertyOptional({ description: 'Filter by end date (ISO8601)', example: '2024-12-31T23:59:59.999Z' })
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  offset?: number;
+  endDate?: string;
 }
 
 export class DeleteOrderResponseDto {

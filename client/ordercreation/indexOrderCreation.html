@@ -407,7 +407,7 @@
         // Load users with bonus cards
         async function loadUsers() {
             try {
-                const response = await apiRequest('/users?limit=1000', { loadingMessage: 'Loading Users...' });
+                const response = await apiRequest('/users', { loadingMessage: 'Loading Users...' });
                 state.users = response.data || response || [];
                 renderUsers();
                 
@@ -474,7 +474,7 @@
         // Load markets
         async function loadMarkets() {
             try {
-                const response = await apiRequest('/markets?limit=1000', { loadingMessage: 'Loading Markets...' });
+                const response = await apiRequest('/markets', { loadingMessage: 'Loading Markets...' });
                 const rawMarkets = response.data || response || [];
                 
                 // Fix encoding for each market before storing in state
@@ -530,7 +530,7 @@
         // Load products
         async function loadProducts() {
             try {
-                const response = await apiRequest('/products?limit=1000', { loadingMessage: 'Loading Products...' });
+                const response = await apiRequest('/products', { loadingMessage: 'Loading Products...' });
                 state.products = response.data || response || [];
                 renderProducts();
                 

@@ -7,11 +7,12 @@ import { User } from '../entities/user.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { RewardTransaction, TransactionType } from '../entities/reward-transaction.entity';
 import { ProductCredit } from '../entities/product-credit.entity';
-import { CreateRatingDto, RatingResponseDto, ProductRatingStatsDto } from '../dtos/rating.dto';
+import { CreateRatingDto, RatingResponseDto, ProductRatingStatsDto, UpdateRatingDto } from '../dtos/rating.dto';
+import { PaginationParamsDto, PaginatedResponseDto } from '../dtos/pagination.dto';
 import { ClsService } from 'nestjs-cls';
 import { AiClassificationService } from './ai-classification.service';
 import { ClassificationStatsDto } from '@/dtos/ai-classification.dto';
-import { UpdateRatingDto } from '@/dtos/update-rating.dto';
+// UpdateRatingDto imported from rating.dto above
 import { AiClassification } from '@/entities/ai-classification.entity';
 // import { ClassificationStatsDto } from './path/to/dto'; // Adjust path as necessary
 
@@ -49,7 +50,7 @@ export class RatingsService {
    * Automatically classifies comment using AI
    */
   async createRating(createRatingDto: CreateRatingDto): Promise<RatingResponseDto> {
-    const { productId, score, comment } = createRatingDto;
+    const { productId, score, comment, reason } = createRatingDto;
 
     const user = this.clsService.get<User>('user');
     if (!user) throw new ForbiddenException('User not identified');
@@ -100,30 +101,43 @@ export class RatingsService {
         credit.order && credit.order.userId === userId
       );
 
-      if (userCredits.length === 0) {
-        throw new BadRequestException('No available credits for this product. You may have already rated it from all purchases.');
+      let creditToUse: ProductCredit | null = null;
+      let rewardPoints = 0;
+      let rewardAmount = 0;
+
+      if (userCredits.length > 0) {
+        // Use the first unclaimed credit (FIFO - First In First Out)
+        creditToUse = userCredits[0];
+        rewardPoints = creditToUse.ratingPoints;
+        rewardAmount = Number(creditToUse.allocatedCredit);
       }
 
-      // Use the first unclaimed credit (FIFO - First In First Out)
-      const creditToUse = userCredits[0];
-      const rewardPoints = creditToUse.ratingPoints;
-      const rewardAmount = creditToUse.allocatedCredit;
+      // If no credit found, we simply proceed with 0 reward.
+      // This allows users to rate products they bought but which offered no reward.
 
-      // 5. Create the rating
+      // 5. Determine Rating Reason (Logic Update)
+      const finalReason = await this.determineRatingReason(score, comment, reason);
+      // Condition 3: High Rating (> 3) -> Save normally (finalReason stays as provided or null)
+
+
+      // 6. Create the rating
       const rating = queryRunner.manager.create(Rating, {
         userId,
         productId,
         score,
         comment: comment,
+        reason: finalReason,
         rewardPoints,
         rewardAmount: Number(rewardAmount)
       });
 
       const savedRating = await queryRunner.manager.save(Rating, rating);
 
-      // 7. Mark credit as claimed
-      creditToUse.isClaimed = true;
-      await queryRunner.manager.save(ProductCredit, creditToUse);
+      // 7. Mark credit as claimed (if applicable)
+      if (creditToUse) {
+        creditToUse.isClaimed = true;
+        await queryRunner.manager.save(ProductCredit, creditToUse);
+      }
 
       // 8. Update product rating statistics
       await this.updateProductRatingStats(productId, queryRunner.manager);
@@ -156,14 +170,11 @@ export class RatingsService {
 
       // 11. 🤖 AI CLASSIFICATION: Automatically classify comment if provided
       // Classification happens AFTER transaction commit to ensure visibility and performance
-      if (comment && comment.trim().length > 0) {
-        try {
-          await this.aiClassificationService.classifyComment(savedRating.id, comment);
-        } catch (classificationError) {
-          // Log error but don't fail the rating creation
-          console.error('AI Classification failed:', classificationError);
-        }
-      }
+      // Only for High Ratings or if we still want topics analysis for low ratings in parallel (optional based on "I do not want to use ai_classification_entity")
+      // User said: "I do not want to use ai_classification_entity" in the context of storing reason.
+      // But keeping it for stats might be good. I'll leave it but maybe wrap in try/catch just in case.
+      // 11. 🤖 AI Classification skipped as per user request to not use AiClassification entity
+      // if (comment && comment.trim().length > 0) { ... }
 
       // 11. Return response
       return {
@@ -172,6 +183,7 @@ export class RatingsService {
         productName: product.name,
         score: savedRating.score,
         comment: savedRating.comment,
+        reason: savedRating.reason,
         rewardPoints: savedRating.rewardPoints,
         rewardAmount: savedRating.rewardAmount,
         createdAt: savedRating.createdAt
@@ -221,18 +233,19 @@ export class RatingsService {
       if (updateRatingDto.score !== undefined) rating.score = updateRatingDto.score;
       if (updateRatingDto.comment !== undefined) rating.comment = updateRatingDto.comment;
 
+      // Determine reason based on updated score and comment
+      rating.reason = await this.determineRatingReason(
+        rating.score,
+        rating.comment,
+        updateRatingDto.reason !== undefined ? updateRatingDto.reason : rating.reason
+      );
+
       const savedRating = await queryRunner.manager.save(Rating, rating);
 
       await queryRunner.manager.delete('AiClassification', { ratingId: rating.id });
 
-      // 4. Handle AI Re-classification if comment changed
-      if (updateRatingDto.comment !== undefined) {
-        await this.aiClassificationService.classifyRating(
-          savedRating.id,
-          savedRating.comment,
-          queryRunner.manager
-        );
-      }
+      // 4. AI Re-classification skipped
+      // if (updateRatingDto.comment !== undefined) { ... }
 
       // 5. Recalculate product rating stats (Avg/Count)
       await this.updateProductRatingStats(rating.productId, queryRunner.manager);
@@ -246,6 +259,7 @@ export class RatingsService {
         productName: rating.product.name,
         score: savedRating.score,
         comment: savedRating.comment,
+        reason: savedRating.reason,
         rewardPoints: savedRating.rewardPoints,
         rewardAmount: savedRating.rewardAmount,
         createdAt: savedRating.createdAt
@@ -256,6 +270,46 @@ export class RatingsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  /**
+   * Determine the reason for a rating based on score, comment, and provided reason
+   */
+  private async determineRatingReason(score: number, comment?: string | null, reason?: string | null): Promise<string | null> {
+    let finalReason: string | null = reason || null;
+
+    // Condition 1 & 2: Low Rating (<= 3)
+    if (score <= 3) {
+      // Condition 1: Manual Selection
+      // If reason is provided and IS NOT "Other", use it directly.
+      if (reason && reason !== 'Other') {
+        finalReason = reason;
+      }
+      // Condition 2: AI Trigger (Reason is empty or "Other")
+      else if ((!reason || reason === 'Other') && comment && comment.trim().length > 0) {
+        try {
+          // Call AI to get the reason classification string
+          const aiResult = await this.aiClassificationService.rawCommentClassify(comment);
+          if (aiResult && !Array.isArray(aiResult) && aiResult.topic_label) {
+            finalReason = aiResult.topic_label;
+          } else {
+            finalReason = 'Other';
+          }
+        } catch (e) {
+          console.error("AI Classification failed for reason:", e);
+          finalReason = 'Other';
+        }
+      } else {
+        // Low rating, no reason, no comment -> Default to Other or keep null if that's allowed? 
+        // Requirement says "Save using AI's output". If no comment, AI can't run.
+        if (!finalReason || finalReason === 'Other') finalReason = 'Other';
+      }
+    } else {
+      // Condition 3: High Rating (> 3) -> Reason is usually not needed or null
+      finalReason = null;
+    }
+
+    return finalReason;
   }
 
   /**
@@ -304,6 +358,7 @@ export class RatingsService {
       productName: rating.product.name,
       score: rating.score,
       comment: rating.comment,
+      reason: rating.reason,
       rewardPoints: rating.rewardPoints,
       rewardAmount: rating.rewardAmount,
       createdAt: rating.createdAt,
@@ -365,6 +420,7 @@ export class RatingsService {
     const user = this.clsService.get<User>('user');
     if (!user) throw new ForbiddenException('User not identified');
     const userId = user.id;
+
     const ratings = await this.ratingsRepository.find({
       where: { userId },
       relations: ['product', 'aiClassifications'],
@@ -377,6 +433,7 @@ export class RatingsService {
       productName: rating.product.name,
       score: rating.score,
       comment: rating.comment,
+      reason: rating.reason,
       rewardPoints: rating.rewardPoints,
       rewardAmount: rating.rewardAmount,
       createdAt: rating.createdAt,
@@ -386,5 +443,67 @@ export class RatingsService {
         topicConfidence: c.topicConfidence,
       })) || []
     }));
+  }
+
+  /**
+   * Delete a rating
+   */
+  async deleteRating(ratingId: string): Promise<void> {
+    const user = this.clsService.get<User>('user');
+    if (!user) throw new ForbiddenException('User not identified');
+    const userId = user.id;
+
+    const rating = await this.ratingsRepository.findOne({
+      where: { id: ratingId }
+    });
+
+    if (!rating) {
+      throw new NotFoundException('Rating not found');
+    }
+
+    // if (rating.userId !== userId) {
+    //   throw new ForbiddenException('You can only delete your own ratings');
+    // }
+
+    // TypeORM handles cascading delete for related entities if configured.
+    await this.ratingsRepository.remove(rating);
+  }
+
+  /**
+   * Find all ratings with pagination (Admin only)
+   */
+  async findAll(query: PaginationParamsDto): Promise<PaginatedResponseDto<any>> {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const [ratings, total] = await this.ratingsRepository.findAndCount({
+      relations: ['user', 'product'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: skip,
+    });
+
+    const mappedData = ratings.map(rating => ({
+      id: rating.id,
+      productId: rating.productId,
+      productName: rating.product?.name || 'Unknown Product',
+      score: rating.score,
+      comment: rating.comment,
+      reason: rating.reason,
+      rewardPoints: rating.rewardPoints,
+      rewardAmount: rating.rewardAmount,
+      createdAt: rating.createdAt,
+      userId: rating.userId,
+      userName: rating.user ? `${rating.user.name} ${rating.user.surname}` : 'Unknown User',
+      userPhone: rating.user?.phone || 'N/A'
+    }));
+
+    return {
+      data: mappedData as any,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

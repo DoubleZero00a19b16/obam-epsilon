@@ -17,13 +17,7 @@ export class Product {
   @Column({ type: 'varchar', length: 100, nullable: true })
   sku: string;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-    name: 'allowed_rating',
-    comment: 'True if this product can be rated and earn credits'
-  })
-  allowedRating: boolean;
+
 
   @Column({
     type: 'decimal',

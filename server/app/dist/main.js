@@ -114,7 +114,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AiClassificationController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -123,6 +123,7 @@ const ai_classification_service_1 = __webpack_require__(/*! @/services/ai-classi
 const ai_classification_dto_1 = __webpack_require__(/*! @/dtos/ai-classification.dto */ "./src/dtos/ai-classification.dto.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
+const pagination_dto_1 = __webpack_require__(/*! @/dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 let AiClassificationController = class AiClassificationController {
     constructor(aiClassificationService) {
         this.aiClassificationService = aiClassificationService;
@@ -135,13 +136,8 @@ let AiClassificationController = class AiClassificationController {
             data: health,
         };
     }
-    async findAll(limit, offset) {
-        const classifications = await this.aiClassificationService.findAll(limit, offset);
-        return {
-            statusCode: 200,
-            message: 'Classifications retrieved successfully',
-            data: classifications,
-        };
+    async findAll(query) {
+        return this.aiClassificationService.findAll(query);
     }
     async getByRating(ratingId) {
         const classifications = await this.aiClassificationService.getClassificationsByRating(ratingId);
@@ -223,17 +219,14 @@ __decorate([
         summary: 'Get all AI classifications',
         description: 'Retrieve all comment classifications with pagination'
     }),
-    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number, example: 50 }),
-    (0, swagger_1.ApiQuery)({ name: 'offset', required: false, type: Number, example: 0 }),
     (0, swagger_1.ApiResponse)({
         status: 200,
         description: 'Classifications retrieved successfully',
-        type: [ai_classification_dto_1.AiClassificationDto]
+        type: pagination_dto_1.PaginatedResponseDto
     }),
-    __param(0, (0, common_1.Query)('limit')),
-    __param(1, (0, common_1.Query)('offset')),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:paramtypes", [typeof (_b = typeof pagination_dto_1.PaginationParamsDto !== "undefined" && pagination_dto_1.PaginationParamsDto) === "function" ? _b : Object]),
     __metadata("design:returntype", Promise)
 ], AiClassificationController.prototype, "findAll", null);
 __decorate([
@@ -496,7 +489,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MarketsController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -506,6 +499,7 @@ const update_market_dto_1 = __webpack_require__(/*! @/dtos/update-market.dto */ 
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
+const pagination_dto_1 = __webpack_require__(/*! @/dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 let MarketsController = class MarketsController {
     constructor(marketsService) {
         this.marketsService = marketsService;
@@ -513,8 +507,8 @@ let MarketsController = class MarketsController {
     create(createMarketDto) {
         return this.marketsService.create(createMarketDto);
     }
-    findAll() {
-        return this.marketsService.findAll();
+    findAll(query) {
+        return this.marketsService.findAll(query);
     }
     findOne(id) {
         return this.marketsService.findOne(+id);
@@ -536,8 +530,10 @@ __decorate([
 ], MarketsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all markets with pagination' }),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [typeof (_c = typeof pagination_dto_1.PaginationParamsDto !== "undefined" && pagination_dto_1.PaginationParamsDto) === "function" ? _c : Object]),
     __metadata("design:returntype", void 0)
 ], MarketsController.prototype, "findAll", null);
 __decorate([
@@ -552,7 +548,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_c = typeof update_market_dto_1.UpdateMarketDto !== "undefined" && update_market_dto_1.UpdateMarketDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_market_dto_1.UpdateMarketDto !== "undefined" && update_market_dto_1.UpdateMarketDto) === "function" ? _d : Object]),
     __metadata("design:returntype", void 0)
 ], MarketsController.prototype, "update", null);
 __decorate([
@@ -592,7 +588,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OrdersController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -602,6 +598,7 @@ const order_dto_1 = __webpack_require__(/*! ../dtos/order.dto */ "./src/dtos/ord
 const create_order_dto_1 = __webpack_require__(/*! ../dtos/create-order.dto */ "./src/dtos/create-order.dto.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
+const pagination_dto_1 = __webpack_require__(/*! @/dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 let OrdersController = class OrdersController {
     constructor(ordersService) {
         this.ordersService = ordersService;
@@ -614,13 +611,12 @@ let OrdersController = class OrdersController {
             data: order
         };
     }
+    async findAll(query) {
+        return this.ordersService.findAll(query);
+    }
     async getMyOrders(query) {
         const orders = await this.ordersService.getMyOrders(query);
-        return {
-            statusCode: common_1.HttpStatus.OK,
-            message: 'Orders retrieved successfully',
-            data: orders
-        };
+        return orders;
     }
     async getOrderByIdAdmin(orderId) {
         const order = await this.ordersService.getOrderByIdAdmin(orderId);
@@ -681,6 +677,23 @@ __decorate([
     __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
 ], OrdersController.prototype, "createOrder", null);
 __decorate([
+    (0, common_1.Get)(),
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get all orders (Admin)',
+        description: 'Retrieve a paginated list of all orders across the system (Admin only).',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Orders retrieved successfully',
+        type: pagination_dto_1.PaginatedResponseDto,
+    }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof order_dto_1.GetMyOrdersQueryDto !== "undefined" && order_dto_1.GetMyOrdersQueryDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], OrdersController.prototype, "findAll", null);
+__decorate([
     (0, common_1.Get)('my-orders'),
     (0, swagger_1.ApiOperation)({
         summary: 'Get my orders',
@@ -693,8 +706,8 @@ __decorate([
     }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_d = typeof order_dto_1.GetMyOrdersQueryDto !== "undefined" && order_dto_1.GetMyOrdersQueryDto) === "function" ? _d : Object]),
-    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+    __metadata("design:paramtypes", [typeof (_f = typeof order_dto_1.GetMyOrdersQueryDto !== "undefined" && order_dto_1.GetMyOrdersQueryDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
 ], OrdersController.prototype, "getMyOrders", null);
 __decorate([
     (0, common_1.Get)('admin/:orderId'),
@@ -719,7 +732,7 @@ __decorate([
     __param(0, (0, common_1.Param)('orderId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], OrdersController.prototype, "getOrderByIdAdmin", null);
 __decorate([
     (0, common_1.Get)(':orderId'),
@@ -744,7 +757,7 @@ __decorate([
     __param(0, (0, common_1.Param)('orderId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], OrdersController.prototype, "getOrderById", null);
 __decorate([
     (0, common_1.Get)('my-orders/unrated'),
@@ -759,7 +772,7 @@ __decorate([
     }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
 ], OrdersController.prototype, "getUnratedProducts", null);
 __decorate([
     (0, common_1.Get)('my-orders/stats'),
@@ -786,7 +799,7 @@ __decorate([
     }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+    __metadata("design:returntype", typeof (_l = typeof Promise !== "undefined" && Promise) === "function" ? _l : Object)
 ], OrdersController.prototype, "getOrderStats", null);
 __decorate([
     (0, common_1.Delete)(':id'),
@@ -812,7 +825,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
+    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
 ], OrdersController.prototype, "delete", null);
 exports.OrdersController = OrdersController = __decorate([
     (0, swagger_1.ApiTags)('orders'),
@@ -844,7 +857,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProductsController = void 0;
 const create_product_dto_1 = __webpack_require__(/*! @/dtos/create-product.dto */ "./src/dtos/create-product.dto.ts");
@@ -854,6 +867,7 @@ const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guard
 const products_service_1 = __webpack_require__(/*! @/services/products.service */ "./src/services/products.service.ts");
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const pagination_dto_1 = __webpack_require__(/*! @/dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 let ProductsController = class ProductsController {
     constructor(productsService) {
         this.productsService = productsService;
@@ -864,8 +878,8 @@ let ProductsController = class ProductsController {
     async findTop() {
         return await this.productsService.findTop();
     }
-    findAll() {
-        return this.productsService.findAll();
+    findAll(query) {
+        return this.productsService.findAll(query);
     }
     findOne(id) {
         return this.productsService.findOne(id);
@@ -895,8 +909,10 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all products with pagination' }),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [typeof (_c = typeof pagination_dto_1.PaginationParamsDto !== "undefined" && pagination_dto_1.PaginationParamsDto) === "function" ? _c : Object]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "findAll", null);
 __decorate([
@@ -913,7 +929,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id', common_1.ParseUUIDPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_c = typeof update_product_dto_1.UpdateProductDto !== "undefined" && update_product_dto_1.UpdateProductDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof update_product_dto_1.UpdateProductDto !== "undefined" && update_product_dto_1.UpdateProductDto) === "function" ? _d : Object]),
     __metadata("design:returntype", void 0)
 ], ProductsController.prototype, "update", null);
 __decorate([
@@ -954,21 +970,24 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RatingsController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const ratings_service_1 = __webpack_require__(/*! ../services/ratings.service */ "./src/services/ratings.service.ts");
 const rating_dto_1 = __webpack_require__(/*! ../dtos/rating.dto */ "./src/dtos/rating.dto.ts");
+const pagination_dto_1 = __webpack_require__(/*! ../dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 const auth_guard_1 = __webpack_require__(/*! @/guards/auth.guard */ "./src/guards/auth.guard.ts");
 const ai_classification_service_1 = __webpack_require__(/*! @/services/ai-classification.service */ "./src/services/ai-classification.service.ts");
-const update_rating_dto_1 = __webpack_require__(/*! @/dtos/update-rating.dto */ "./src/dtos/update-rating.dto.ts");
 const admin_guard_1 = __webpack_require__(/*! @/guards/admin.guard */ "./src/guards/admin.guard.ts");
 let RatingsController = class RatingsController {
     constructor(ratingsService, aiClassificationService) {
         this.ratingsService = ratingsService;
         this.aiClassificationService = aiClassificationService;
+    }
+    async findAll(query) {
+        return this.ratingsService.findAll(query);
     }
     async createRating(createRatingDto) {
         const rating = await this.ratingsService.createRating(createRatingDto);
@@ -984,6 +1003,13 @@ let RatingsController = class RatingsController {
             statusCode: 200,
             message: 'Rating updated successfully',
             data: updatedRating
+        };
+    }
+    async deleteRating(ratingId, req) {
+        await this.ratingsService.deleteRating(ratingId);
+        return {
+            statusCode: common_1.HttpStatus.OK,
+            message: 'Rating deleted successfully'
         };
     }
     async getProductRatings(productId) {
@@ -1010,6 +1036,23 @@ let RatingsController = class RatingsController {
 };
 exports.RatingsController = RatingsController;
 __decorate([
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Get all ratings (Admin only)',
+        description: 'Retrieve a paginated list of all product ratings submitted by users.',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Paginated list of ratings',
+        type: pagination_dto_1.PaginatedResponseDto,
+    }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof pagination_dto_1.PaginationParamsDto !== "undefined" && pagination_dto_1.PaginationParamsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], RatingsController.prototype, "findAll", null);
+__decorate([
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(common_1.HttpStatus.CREATED),
     (0, swagger_1.ApiOperation)({
@@ -1035,17 +1078,39 @@ __decorate([
     }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_c = typeof rating_dto_1.CreateRatingDto !== "undefined" && rating_dto_1.CreateRatingDto) === "function" ? _c : Object]),
-    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+    __metadata("design:paramtypes", [typeof (_e = typeof rating_dto_1.CreateRatingDto !== "undefined" && rating_dto_1.CreateRatingDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
 ], RatingsController.prototype, "createRating", null);
 __decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, typeof (_e = typeof update_rating_dto_1.UpdateRatingDto !== "undefined" && update_rating_dto_1.UpdateRatingDto) === "function" ? _e : Object]),
+    __metadata("design:paramtypes", [String, typeof (_g = typeof rating_dto_1.UpdateRatingDto !== "undefined" && rating_dto_1.UpdateRatingDto) === "function" ? _g : Object]),
     __metadata("design:returntype", Promise)
 ], RatingsController.prototype, "updateRating", null);
+__decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: 'Delete a rating',
+        description: 'Delete a specific rating. Users can only delete their own ratings.',
+    }),
+    (0, swagger_1.ApiParam)({
+        name: 'id',
+        description: 'UUID of the rating to delete',
+        example: '550e8400-e29b-41d4-a716-446655440012',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Rating deleted successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden - User does not own this rating' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Rating not found' }),
+    (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RatingsController.prototype, "deleteRating", null);
 __decorate([
     (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)('product/:productId'),
@@ -1066,7 +1131,7 @@ __decorate([
     __param(0, (0, common_1.Param)('productId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], RatingsController.prototype, "getProductRatings", null);
 __decorate([
     (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
@@ -1092,7 +1157,7 @@ __decorate([
     __param(0, (0, common_1.Param)('productId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], RatingsController.prototype, "getProductRatingStats", null);
 __decorate([
     (0, common_1.Get)('my-ratings'),
@@ -1107,7 +1172,7 @@ __decorate([
     }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
 ], RatingsController.prototype, "getMyRatings", null);
 exports.RatingsController = RatingsController = __decorate([
     (0, swagger_1.ApiTags)('ratings'),
@@ -1139,7 +1204,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d;
+var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersController = void 0;
 const create_user_dto_1 = __webpack_require__(/*! @/dtos/create-user.dto */ "./src/dtos/create-user.dto.ts");
@@ -1150,6 +1215,7 @@ const users_service_1 = __webpack_require__(/*! @/services/users.service */ "./s
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 const crypto_1 = __webpack_require__(/*! crypto */ "crypto");
+const pagination_dto_1 = __webpack_require__(/*! @/dtos/pagination.dto */ "./src/dtos/pagination.dto.ts");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
@@ -1166,8 +1232,8 @@ let UsersController = class UsersController {
             return errorMessage;
         }
     }
-    findAll() {
-        return this.usersService.findAll();
+    findAll(query) {
+        return this.usersService.findAll(query);
     }
     getMe() {
         return this.usersService.getMe();
@@ -1203,8 +1269,11 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(admin_guard_1.AdminGuard),
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all users with pagination' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Return paginated users' }),
+    __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [typeof (_c = typeof pagination_dto_1.PaginationParamsDto !== "undefined" && pagination_dto_1.PaginationParamsDto) === "function" ? _c : Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findAll", null);
 __decorate([
@@ -1229,7 +1298,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_c = typeof crypto_1.UUID !== "undefined" && crypto_1.UUID) === "function" ? _c : Object, typeof (_d = typeof update_user_dto_1.UpdateUserDto !== "undefined" && update_user_dto_1.UpdateUserDto) === "function" ? _d : Object]),
+    __metadata("design:paramtypes", [typeof (_d = typeof crypto_1.UUID !== "undefined" && crypto_1.UUID) === "function" ? _d : Object, typeof (_e = typeof update_user_dto_1.UpdateUserDto !== "undefined" && update_user_dto_1.UpdateUserDto) === "function" ? _e : Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
 __decorate([
@@ -1636,15 +1705,6 @@ __decorate([
 ], CreateProductDto.prototype, "sku", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        example: true,
-        description: 'Whether users can rate this product',
-        default: true,
-    }),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], CreateProductDto.prototype, "allowedRating", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
         example: 0.10,
         description: 'Static reward amount in dollars for rating this product',
         default: 0.00,
@@ -1792,7 +1852,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeleteOrderResponseDto = exports.GetMyOrdersQueryDto = exports.MyOrdersResponseDto = exports.ProductInOrderDto = void 0;
 const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
-const class_transformer_1 = __webpack_require__(/*! class-transformer */ "class-transformer");
+const pagination_dto_1 = __webpack_require__(/*! ./pagination.dto */ "./src/dtos/pagination.dto.ts");
 class ProductInOrderDto {
 }
 exports.ProductInOrderDto = ProductInOrderDto;
@@ -1874,33 +1934,19 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Products in this order', type: [ProductInOrderDto] }),
     __metadata("design:type", Array)
 ], MyOrdersResponseDto.prototype, "products", void 0);
-class GetMyOrdersQueryDto {
+class GetMyOrdersQueryDto extends pagination_dto_1.PaginationParamsDto {
 }
 exports.GetMyOrdersQueryDto = GetMyOrdersQueryDto;
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'Maximum number of orders to return',
-        example: 50,
-        default: 50,
-    }),
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by start date (ISO8601)', example: '2024-01-01T00:00:00.000Z' }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(1),
-    __metadata("design:type", Number)
-], GetMyOrdersQueryDto.prototype, "limit", void 0);
+    __metadata("design:type", String)
+], GetMyOrdersQueryDto.prototype, "startDate", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'Number of orders to skip for pagination',
-        example: 0,
-        default: 0,
-    }),
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by end date (ISO8601)', example: '2024-12-31T23:59:59.999Z' }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(0),
-    __metadata("design:type", Number)
-], GetMyOrdersQueryDto.prototype, "offset", void 0);
+    __metadata("design:type", String)
+], GetMyOrdersQueryDto.prototype, "endDate", void 0);
 class DeleteOrderResponseDto {
 }
 exports.DeleteOrderResponseDto = DeleteOrderResponseDto;
@@ -1916,6 +1962,86 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Timestamp of deletion', example: '2024-12-20T15:30:00.000Z' }),
     __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
 ], DeleteOrderResponseDto.prototype, "deletedAt", void 0);
+
+
+/***/ }),
+
+/***/ "./src/dtos/pagination.dto.ts":
+/*!************************************!*\
+  !*** ./src/dtos/pagination.dto.ts ***!
+  \************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PaginatedResponseDto = exports.PaginationParamsDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const class_transformer_1 = __webpack_require__(/*! class-transformer */ "class-transformer");
+class PaginationParamsDto {
+    constructor() {
+        this.page = 1;
+        this.limit = 10;
+    }
+}
+exports.PaginationParamsDto = PaginationParamsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Page number (starting from 1)',
+        example: 1,
+        default: 1,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], PaginationParamsDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Number of items per page',
+        example: 10,
+        default: 10,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(1000),
+    __metadata("design:type", Number)
+], PaginationParamsDto.prototype, "limit", void 0);
+class PaginatedResponseDto {
+}
+exports.PaginatedResponseDto = PaginatedResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'The data for the current page' }),
+    __metadata("design:type", Array)
+], PaginatedResponseDto.prototype, "data", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Total number of items in the database' }),
+    __metadata("design:type", Number)
+], PaginatedResponseDto.prototype, "total", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Current page number' }),
+    __metadata("design:type", Number)
+], PaginatedResponseDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Number of items per page' }),
+    __metadata("design:type", Number)
+], PaginatedResponseDto.prototype, "limit", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Total number of pages' }),
+    __metadata("design:type", Number)
+], PaginatedResponseDto.prototype, "totalPages", void 0);
 
 
 /***/ }),
@@ -1938,7 +2064,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProductRatingStatsDto = exports.RatingWithClassificationsDto = exports.RatingResponseDto = exports.CreateRatingDto = void 0;
+exports.ProductRatingStatsDto = exports.RatingWithClassificationsDto = exports.RatingResponseDto = exports.UpdateRatingDto = exports.CreateRatingDto = void 0;
 const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
 const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
 class CreateRatingDto {
@@ -1975,6 +2101,39 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateRatingDto.prototype, "comment", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Reason for low rating (manual selection or AI classified)',
+        example: 'Price',
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateRatingDto.prototype, "reason", void 0);
+class UpdateRatingDto {
+}
+exports.UpdateRatingDto = UpdateRatingDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'New rating score', minimum: 1, maximum: 5 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(5),
+    __metadata("design:type", Number)
+], UpdateRatingDto.prototype, "score", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'New user comment', maxLength: 500 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(0, 500),
+    __metadata("design:type", String)
+], UpdateRatingDto.prototype, "comment", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Reason for rating change' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateRatingDto.prototype, "reason", void 0);
 class RatingResponseDto {
 }
 exports.RatingResponseDto = RatingResponseDto;
@@ -1998,6 +2157,10 @@ __decorate([
     (0, swagger_1.ApiProperty)({ description: 'User comment', example: 'Amazing cookies!', nullable: true }),
     __metadata("design:type", Object)
 ], RatingResponseDto.prototype, "comment", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Reason for rating', example: 'Quality', nullable: true }),
+    __metadata("design:type", Object)
+], RatingResponseDto.prototype, "reason", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: 'Reward points earned', example: 520 }),
     __metadata("design:type", Number)
@@ -2184,45 +2347,6 @@ const create_product_dto_1 = __webpack_require__(/*! ./create-product.dto */ "./
 class UpdateProductDto extends (0, mapped_types_1.PartialType)(create_product_dto_1.CreateProductDto) {
 }
 exports.UpdateProductDto = UpdateProductDto;
-
-
-/***/ }),
-
-/***/ "./src/dtos/update-rating.dto.ts":
-/*!***************************************!*\
-  !*** ./src/dtos/update-rating.dto.ts ***!
-  \***************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.UpdateRatingDto = void 0;
-const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
-class UpdateRatingDto {
-}
-exports.UpdateRatingDto = UpdateRatingDto;
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(1),
-    (0, class_validator_1.Max)(5),
-    __metadata("design:type", Number)
-], UpdateRatingDto.prototype, "score", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Length)(0, 500),
-    __metadata("design:type", String)
-], UpdateRatingDto.prototype, "comment", void 0);
 
 
 /***/ }),
@@ -2732,15 +2856,6 @@ __decorate([
 ], Product.prototype, "sku", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'boolean',
-        default: true,
-        name: 'allowed_rating',
-        comment: 'True if this product can be rated and earn credits'
-    }),
-    __metadata("design:type", Boolean)
-], Product.prototype, "allowedRating", void 0);
-__decorate([
-    (0, typeorm_1.Column)({
         type: 'decimal',
         precision: 10,
         scale: 2,
@@ -2892,8 +3007,12 @@ __decorate([
 ], Rating.prototype, "score", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], Rating.prototype, "comment", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], Rating.prototype, "reason", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
@@ -3707,7 +3826,7 @@ let AiClassificationService = class AiClassificationService {
         this.aiClassificationRepo = aiClassificationRepo;
         this.ratingRepo = ratingRepo;
         this.configService = configService;
-        this.fastApiUrl = this.configService.get('FASTAPI_URL', 'http://fastapi-api:8000');
+        this.fastApiUrl = this.configService.get('FASTAPI_URL', 'http://localhost:8000');
     }
     async classifyComment(ratingId, comment) {
         const rating = await this.ratingRepo.findOne({ where: { id: ratingId } });
@@ -3893,13 +4012,22 @@ let AiClassificationService = class AiClassificationService {
         }
         return savedClassifications;
     }
-    async findAll(limit = 50, offset = 0) {
-        return await this.aiClassificationRepo.find({
+    async findAll(params) {
+        const { page = 1, limit = 10 } = params;
+        const skip = (page - 1) * limit;
+        const [classifications, total] = await this.aiClassificationRepo.findAndCount({
             relations: ['rating', 'rating.user', 'rating.product'],
             take: limit,
-            skip: offset,
+            skip: skip,
             order: { createdAt: 'DESC' },
         });
+        return {
+            data: classifications,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
     async findOne(classificationId) {
         const classification = await this.aiClassificationRepo.findOne({
@@ -4128,9 +4256,20 @@ let MarketsService = class MarketsService {
     create(createMarketDto) {
         return 'This action adds a new market';
     }
-    async findAll() {
-        const markets = await this.marketRepo.find();
-        return markets;
+    async findAll(params) {
+        const { page = 1, limit = 10 } = params;
+        const skip = (page - 1) * limit;
+        const [markets, total] = await this.marketRepo.findAndCount({
+            take: limit,
+            skip: skip,
+        });
+        return {
+            data: markets,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
     findOne(id) {
         return `This action returns a #${id} market`;
@@ -4213,10 +4352,7 @@ let OrdersService = class OrdersService {
             if (!bonusCard) {
                 throw new common_1.BadRequestException('Invalid bonus card');
             }
-            if (bonusCard.userId !== user.id) {
-                throw new common_1.ForbiddenException('Bonus card does not belong to user');
-            }
-            const userId = user.id;
+            const userId = bonusCard.userId;
             const productIds = items.map(item => item.productId);
             const products = await queryRunner.manager.find(product_entity_1.Product, {
                 where: {
@@ -4268,7 +4404,7 @@ let OrdersService = class OrdersService {
                     ...saved,
                     product: itemData.product,
                 });
-                if (itemData.product.allowedRating && Number(itemData.product.rewardAmount) > 0) {
+                if (Number(itemData.product.rewardAmount) > 0) {
                     const rewardAmount = Number(itemData.product.rewardAmount);
                     const points = Math.round(rewardAmount / 0.001);
                     const productCredit = queryRunner.manager.create(product_credit_entity_1.ProductCredit, {
@@ -4302,7 +4438,7 @@ let OrdersService = class OrdersService {
                     unitPrice: item.unitPrice,
                     totalPrice: item.totalPrice,
                     isPrivateLabel: item.product.isPrivateLabel,
-                    allowedRating: item.product.allowedRating,
+                    allowedRating: true,
                     rewardAmount: Number(item.product.rewardAmount),
                 })),
             };
@@ -4315,20 +4451,65 @@ let OrdersService = class OrdersService {
             await queryRunner.release();
         }
     }
+    async findAll(params) {
+        const { page = 1, limit = 10, startDate, endDate } = params;
+        const skip = (page - 1) * limit;
+        const where = {};
+        if (startDate && endDate) {
+            where.createdAt = (0, typeorm_2.Between)(new Date(startDate), new Date(endDate));
+        }
+        else if (startDate) {
+            where.createdAt = (0, typeorm_2.MoreThanOrEqual)(new Date(startDate));
+        }
+        else if (endDate) {
+            where.createdAt = (0, typeorm_2.LessThanOrEqual)(new Date(endDate));
+        }
+        const [orders, total] = await this.ordersRepository.findAndCount({
+            where,
+            order: { createdAt: 'DESC' },
+            take: limit,
+            skip: skip,
+        });
+        const enrichedOrders = await this.enrichOrders(orders, '');
+        return {
+            data: enrichedOrders,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
+    }
     async getMyOrders(query) {
-        const { limit = 50, offset = 0 } = query;
+        const { page = 1, limit = 50, startDate, endDate } = query;
+        const skip = (page - 1) * limit;
         const user = this.clsService.get('user');
         if (!user)
             throw new common_1.ForbiddenException('User not identified');
         const userId = user.id;
-        const orders = await this.ordersRepository
-            .createQueryBuilder('order')
-            .where('order.userId = :userId', { userId })
-            .orderBy('order.createdAt', 'DESC')
-            .skip(offset)
-            .take(limit)
-            .getMany();
-        return this.enrichOrders(orders, userId);
+        const where = { userId };
+        if (startDate && endDate) {
+            where.createdAt = (0, typeorm_2.Between)(new Date(startDate), new Date(endDate));
+        }
+        else if (startDate) {
+            where.createdAt = (0, typeorm_2.MoreThanOrEqual)(new Date(startDate));
+        }
+        else if (endDate) {
+            where.createdAt = (0, typeorm_2.LessThanOrEqual)(new Date(endDate));
+        }
+        const [orders, total] = await this.ordersRepository.findAndCount({
+            where,
+            order: { createdAt: 'DESC' },
+            skip: skip,
+            take: limit,
+        });
+        const enrichedOrders = await this.enrichOrders(orders, userId);
+        return {
+            data: enrichedOrders,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
     async getOrderById(orderId) {
         const user = this.clsService.get('user');
@@ -4433,7 +4614,7 @@ let OrdersService = class OrdersService {
                     ratingCount: item.product.ratingCount,
                     averageRating: Number(item.product.averageRating),
                     quantity: item.quantity,
-                    rateable: item.product.allowedRating,
+                    rateable: true,
                     totalPrice: Number(item.totalPrice),
                     hasUserRated: !!userRating,
                     rewardAmount: Number(item.product.rewardAmount),
@@ -4465,7 +4646,8 @@ let OrdersService = class OrdersService {
         if (!user)
             throw new common_1.ForbiddenException('User not identified');
         const userId = user.id;
-        const orders = await this.getMyOrders({});
+        const response = await this.getMyOrders({ limit: 100 });
+        const orders = response.data;
         const unratedProducts = [];
         orders.forEach(order => {
             order.products.forEach(product => {
@@ -4565,9 +4747,21 @@ let ProductsService = class ProductsService {
         const product = this.productRepository.create(createProductDto);
         return await this.productRepository.save(product);
     }
-    async findAll() {
-        const products = await this.productRepository.find();
-        return products;
+    async findAll(params) {
+        const { page = 1, limit = 10 } = params;
+        const skip = (page - 1) * limit;
+        const [products, total] = await this.productRepository.findAndCount({
+            take: limit,
+            skip: skip,
+            order: { createdAt: 'DESC' }
+        });
+        return {
+            data: products,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
     async findOne(id) {
         const product = await this.productRepository.findOne({ where: { id } });
@@ -4694,7 +4888,7 @@ let RatingsService = class RatingsService {
         this.aiClassificationService = aiClassificationService;
     }
     async createRating(createRatingDto) {
-        const { productId, score, comment } = createRatingDto;
+        const { productId, score, comment, reason } = createRatingDto;
         const user = this.clsService.get('user');
         if (!user)
             throw new common_1.ForbiddenException('User not identified');
@@ -4727,23 +4921,29 @@ let RatingsService = class RatingsService {
                 relations: ['order'],
             });
             const userCredits = unclaimedCredits.filter(credit => credit.order && credit.order.userId === userId);
-            if (userCredits.length === 0) {
-                throw new common_1.BadRequestException('No available credits for this product. You may have already rated it from all purchases.');
+            let creditToUse = null;
+            let rewardPoints = 0;
+            let rewardAmount = 0;
+            if (userCredits.length > 0) {
+                creditToUse = userCredits[0];
+                rewardPoints = creditToUse.ratingPoints;
+                rewardAmount = Number(creditToUse.allocatedCredit);
             }
-            const creditToUse = userCredits[0];
-            const rewardPoints = creditToUse.ratingPoints;
-            const rewardAmount = creditToUse.allocatedCredit;
+            const finalReason = await this.determineRatingReason(score, comment, reason);
             const rating = queryRunner.manager.create(rating_entity_1.Rating, {
                 userId,
                 productId,
                 score,
                 comment: comment,
+                reason: finalReason,
                 rewardPoints,
                 rewardAmount: Number(rewardAmount)
             });
             const savedRating = await queryRunner.manager.save(rating_entity_1.Rating, rating);
-            creditToUse.isClaimed = true;
-            await queryRunner.manager.save(product_credit_entity_1.ProductCredit, creditToUse);
+            if (creditToUse) {
+                creditToUse.isClaimed = true;
+                await queryRunner.manager.save(product_credit_entity_1.ProductCredit, creditToUse);
+            }
             await this.updateProductRatingStats(productId, queryRunner.manager);
             const user = await queryRunner.manager.findOne(user_entity_1.User, { where: { id: userId } });
             if (!user) {
@@ -4763,20 +4963,13 @@ let RatingsService = class RatingsService {
             });
             await queryRunner.manager.save(reward_transaction_entity_1.RewardTransaction, transaction);
             await queryRunner.commitTransaction();
-            if (comment && comment.trim().length > 0) {
-                try {
-                    await this.aiClassificationService.classifyComment(savedRating.id, comment);
-                }
-                catch (classificationError) {
-                    console.error('AI Classification failed:', classificationError);
-                }
-            }
             return {
                 id: savedRating.id,
                 productId: product.id,
                 productName: product.name,
                 score: savedRating.score,
                 comment: savedRating.comment,
+                reason: savedRating.reason,
                 rewardPoints: savedRating.rewardPoints,
                 rewardAmount: savedRating.rewardAmount,
                 createdAt: savedRating.createdAt
@@ -4810,11 +5003,9 @@ let RatingsService = class RatingsService {
                 rating.score = updateRatingDto.score;
             if (updateRatingDto.comment !== undefined)
                 rating.comment = updateRatingDto.comment;
+            rating.reason = await this.determineRatingReason(rating.score, rating.comment, updateRatingDto.reason !== undefined ? updateRatingDto.reason : rating.reason);
             const savedRating = await queryRunner.manager.save(rating_entity_1.Rating, rating);
             await queryRunner.manager.delete('AiClassification', { ratingId: rating.id });
-            if (updateRatingDto.comment !== undefined) {
-                await this.aiClassificationService.classifyRating(savedRating.id, savedRating.comment, queryRunner.manager);
-            }
             await this.updateProductRatingStats(rating.productId, queryRunner.manager);
             await queryRunner.commitTransaction();
             return {
@@ -4823,6 +5014,7 @@ let RatingsService = class RatingsService {
                 productName: rating.product.name,
                 score: savedRating.score,
                 comment: savedRating.comment,
+                reason: savedRating.reason,
                 rewardPoints: savedRating.rewardPoints,
                 rewardAmount: savedRating.rewardAmount,
                 createdAt: savedRating.createdAt
@@ -4835,6 +5027,37 @@ let RatingsService = class RatingsService {
         finally {
             await queryRunner.release();
         }
+    }
+    async determineRatingReason(score, comment, reason) {
+        let finalReason = reason || null;
+        if (score <= 3) {
+            if (reason && reason !== 'Other') {
+                finalReason = reason;
+            }
+            else if ((!reason || reason === 'Other') && comment && comment.trim().length > 0) {
+                try {
+                    const aiResult = await this.aiClassificationService.rawCommentClassify(comment);
+                    if (aiResult && !Array.isArray(aiResult) && aiResult.topic_label) {
+                        finalReason = aiResult.topic_label;
+                    }
+                    else {
+                        finalReason = 'Other';
+                    }
+                }
+                catch (e) {
+                    console.error("AI Classification failed for reason:", e);
+                    finalReason = 'Other';
+                }
+            }
+            else {
+                if (!finalReason || finalReason === 'Other')
+                    finalReason = 'Other';
+            }
+        }
+        else {
+            finalReason = null;
+        }
+        return finalReason;
     }
     async verifyUserPurchase(userId, productId, manager) {
         const orderItem = await manager
@@ -4869,6 +5092,7 @@ let RatingsService = class RatingsService {
             productName: rating.product.name,
             score: rating.score,
             comment: rating.comment,
+            reason: rating.reason,
             rewardPoints: rating.rewardPoints,
             rewardAmount: rating.rewardAmount,
             createdAt: rating.createdAt,
@@ -4927,6 +5151,7 @@ let RatingsService = class RatingsService {
             productName: rating.product.name,
             score: rating.score,
             comment: rating.comment,
+            reason: rating.reason,
             rewardPoints: rating.rewardPoints,
             rewardAmount: rating.rewardAmount,
             createdAt: rating.createdAt,
@@ -4935,6 +5160,50 @@ let RatingsService = class RatingsService {
                 topicConfidence: c.topicConfidence,
             })) || []
         }));
+    }
+    async deleteRating(ratingId) {
+        const user = this.clsService.get('user');
+        if (!user)
+            throw new common_1.ForbiddenException('User not identified');
+        const userId = user.id;
+        const rating = await this.ratingsRepository.findOne({
+            where: { id: ratingId }
+        });
+        if (!rating) {
+            throw new common_1.NotFoundException('Rating not found');
+        }
+        await this.ratingsRepository.remove(rating);
+    }
+    async findAll(query) {
+        const { page = 1, limit = 10 } = query;
+        const skip = (page - 1) * limit;
+        const [ratings, total] = await this.ratingsRepository.findAndCount({
+            relations: ['user', 'product'],
+            order: { createdAt: 'DESC' },
+            take: limit,
+            skip: skip,
+        });
+        const mappedData = ratings.map(rating => ({
+            id: rating.id,
+            productId: rating.productId,
+            productName: rating.product?.name || 'Unknown Product',
+            score: rating.score,
+            comment: rating.comment,
+            reason: rating.reason,
+            rewardPoints: rating.rewardPoints,
+            rewardAmount: rating.rewardAmount,
+            createdAt: rating.createdAt,
+            userId: rating.userId,
+            userName: rating.user ? `${rating.user.name} ${rating.user.surname}` : 'Unknown User',
+            userPhone: rating.user?.phone || 'N/A'
+        }));
+        return {
+            data: mappedData,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        };
     }
 };
 exports.RatingsService = RatingsService;
@@ -5000,18 +5269,27 @@ let UsersService = class UsersService {
         await this.userRepo.save(newUser);
         return newUser;
     }
-    async findAll() {
-        const users = await this.userRepo.find({
+    async findAll(params) {
+        const { page = 1, limit = 10 } = params;
+        const skip = (page - 1) * limit;
+        const [users, total] = await this.userRepo.findAndCount({
             relations: ["bonusCard"],
-            select: { bonusCard: true }
+            take: limit,
+            skip: skip,
+            order: { createdAt: 'DESC' }
         });
-        return users;
+        return {
+            data: users,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        };
     }
     async findOne(id) {
         const user = await this.userRepo.findOne({
             where: { id },
             relations: ["bonusCard"],
-            select: { bonusCard: true }
         });
         if (!user) {
             throw new common_1.NotFoundException('User does not exist');

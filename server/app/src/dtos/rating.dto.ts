@@ -1,5 +1,7 @@
-import { IsNotEmpty, IsUUID, IsInt, Min, Max, IsString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsUUID, IsInt, Min, Max, IsString, IsOptional, Length } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { PaginationParamsDto, PaginatedResponseDto } from './pagination.dto';
 
 export class CreateRatingDto {
   @ApiProperty({
@@ -29,6 +31,34 @@ export class CreateRatingDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+  @ApiPropertyOptional({
+    description: 'Reason for low rating (manual selection or AI classified)',
+    example: 'Price',
+  })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class UpdateRatingDto {
+  @ApiPropertyOptional({ description: 'New rating score', minimum: 1, maximum: 5 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  score?: number;
+
+  @ApiPropertyOptional({ description: 'New user comment', maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @Length(0, 500)
+  comment?: string;
+
+  @ApiPropertyOptional({ description: 'Reason for rating change' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 export class RatingResponseDto {
@@ -46,6 +76,9 @@ export class RatingResponseDto {
 
   @ApiProperty({ description: 'User comment', example: 'Amazing cookies!', nullable: true })
   comment: string | null;
+
+  @ApiProperty({ description: 'Reason for rating', example: 'Quality', nullable: true })
+  reason: string | null;
 
   @ApiProperty({ description: 'Reward points earned', example: 520 })
   rewardPoints: number;
@@ -74,6 +107,7 @@ export class RatingWithClassificationsDto extends RatingResponseDto {
     topicConfidence: number;
   }>;
 }
+
 
 export class ProductRatingStatsDto {
   @ApiProperty({ description: 'Product ID', example: '550e8400-e29b-41d4-a716-446655440012' })

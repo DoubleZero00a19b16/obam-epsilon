@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { AiClassification } from '@/entities/ai-classification.entity';
 import { Rating } from '@/entities/rating.entity';
 import { CreateAiClassificationDto, ClassificationStatsDto } from '@/dtos/ai-classification.dto';
+import { PaginatedResponseDto, PaginationParamsDto } from '@/dtos/pagination.dto';
 
 interface FastAPIClassificationResponse {
   topic_label: string;
@@ -48,7 +49,7 @@ export class AiClassificationService {
     try {
       // Call FastAPI classification service
       const classification = await this.callFastAPIClassification(comment);
-      
+
       if (classification.topic_label) {
         // Save classification to database
         const aiClassification = this.aiClassificationRepo.create({
@@ -79,7 +80,7 @@ export class AiClassificationService {
     try {
       // Call FastAPI classification service
       const classification = await this.callFastAPIClassification(comment);
-      
+
       if (!classification.topic_label) {
         throw new ConflictException("CONFLICT HAPPENED!"); ////// ERROR
       }
@@ -247,8 +248,8 @@ export class AiClassificationService {
    * @returns Array of AI classifications
    */
   async classifyRating(
-    ratingId: string, 
-    comment: string, 
+    ratingId: string,
+    comment: string,
     manager?: any
   ): Promise<AiClassification[]> {
     if (!comment || comment.trim().length === 0) {
@@ -273,7 +274,7 @@ export class AiClassificationService {
 
     // Save classifications to database (using transaction manager if provided)
     const savedClassifications: AiClassification[] = [];
-    
+
     if (manager) {
       // Use transaction manager for atomic operations
       for (const classificationDto of classifications) {
@@ -296,13 +297,24 @@ export class AiClassificationService {
   /**
    * Get all classifications with pagination
    */
-  async findAll(limit: number = 50, offset: number = 0): Promise<AiClassification[]> {
-    return await this.aiClassificationRepo.find({
+  async findAll(params: PaginationParamsDto): Promise<PaginatedResponseDto<AiClassification>> {
+    const { page = 1, limit = 10 } = params;
+    const skip = (page - 1) * limit;
+
+    const [classifications, total] = await this.aiClassificationRepo.findAndCount({
       relations: ['rating', 'rating.user', 'rating.product'],
       take: limit,
-      skip: offset,
+      skip: skip,
       order: { createdAt: 'DESC' },
     });
+
+    return {
+      data: classifications,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
   /**
@@ -373,5 +385,5 @@ export class AiClassificationService {
     }
   }
 
-  
+
 }

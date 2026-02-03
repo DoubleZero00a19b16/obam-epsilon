@@ -1,9 +1,10 @@
 import { Controller, Get, Delete, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AiClassificationService } from '@/services/ai-classification.service';
 import { AiClassificationDto, ClassificationStatsDto } from '@/dtos/ai-classification.dto';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AdminGuard } from '@/guards/admin.guard';
+import { PaginatedResponseDto, PaginationParamsDto } from '@/dtos/pagination.dto';
 
 @Controller('ai-classifications')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -28,7 +29,7 @@ export class AiClassificationController {
         message: 'FastAPI service health check',
         data: {
           available: true,
-          url: 'http://localhost:8000'
+          url: 'http://localhost:8000/docs'
         }
       }
     }
@@ -47,23 +48,15 @@ export class AiClassificationController {
     summary: 'Get all AI classifications',
     description: 'Retrieve all comment classifications with pagination'
   })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
-  @ApiQuery({ name: 'offset', required: false, type: Number, example: 0 })
   @ApiResponse({
     status: 200,
     description: 'Classifications retrieved successfully',
-    type: [AiClassificationDto]
+    type: PaginatedResponseDto
   })
   async findAll(
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query() query: PaginationParamsDto,
   ) {
-    const classifications = await this.aiClassificationService.findAll(limit, offset);
-    return {
-      statusCode: 200,
-      message: 'Classifications retrieved successfully',
-      data: classifications,
-    };
+    return this.aiClassificationService.findAll(query);
   }
 
   @Get('rating/:ratingId')

@@ -6,8 +6,6 @@ import { loginDto } from '@/dtos/create-auth.dto';
 // import { RegisterDto } from '@/dtos/register.dto';
 import { User } from '@/entities/user.entity';
 import { RegisterDto } from '@/dtos/register-auth.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { BonusCard } from '@/entities/bonus-card.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -16,9 +14,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    @InjectRepository(BonusCard)
-    private bonusCardRepository: Repository<BonusCard>
-  ) {}
+  ) { }
 
   /**
    * User login
@@ -26,11 +22,11 @@ export class AuthService {
   async login({ password, phone }: loginDto) {
     // Find user by phone
     const user: User | null = await this.usersService.findOneByUsername(
-      { phone }, 
+      { phone },
       { password: true, id: true, name: true, surname: true, phone: true, bonusBalance: true }
     );
 
-    
+
     if (!user) {
       throw new HttpException(
         'Username or password is incorrect!',
@@ -42,7 +38,7 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     console.log(isPasswordValid);
-    
+
 
     if (!isPasswordValid) {
       throw new HttpException(
@@ -56,7 +52,7 @@ export class AuthService {
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
-    
+
     return {
       status: true,
       token,
@@ -94,16 +90,9 @@ export class AuthService {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser;
 
-    const bonusCard = this.bonusCardRepository.create({
-      userId: newUser.id,
-      isActive: true
-    });
-    await this.bonusCardRepository.save(bonusCard);
-
     return {
       status: true,
       message: 'User registered successfully',
-      bonusCard,
       token,
       user: userWithoutPassword
     };

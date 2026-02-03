@@ -88,6 +88,57 @@
     0% { transform: translateX(-100%); }
     100% { transform: translateX(200%); }
 }
+
+/* Premium Reward Effects */
+@keyframes reward-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(212, 242, 56, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(212, 242, 56, 0.6); }
+}
+
+@keyframes reward-shimmer {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  20%, 100% { transform: translateX(250%) skewX(-25deg); }
+}
+
+@keyframes reward-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.reward-glow-pulse {
+  animation: reward-glow 3s infinite ease-in-out;
+}
+
+.reward-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.reward-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-150%) skewX(-25deg);
+  animation: reward-shimmer 6s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.reward-badge-animate {
+  animation: reward-float 2s infinite ease-in-out;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
 </style>
 
     <!-- BACKEND INTEGRATION -->
@@ -115,11 +166,12 @@
           localStorage.setItem("oba_token", token);
         },
 
-        async updateRating(ratingId, score, comment) {
-          // The URL now uses the unique ratingId instead of the productId
+        async updateRating(ratingId, score, comment, reason) {
+          const body = { score, comment };
+          if (reason) body.reason = reason;
           return await this.request(`/ratings/${ratingId}`, {
             method: "PUT",
-            body: JSON.stringify({ score, comment }),
+            body: JSON.stringify(body),
           });
         },
 
@@ -197,17 +249,22 @@
         },
 
         async getProducts() {
-          return await this.request("/products");
+          return await this.request("/products?limit=1000");
         },
 
-        async getUserOrders() {
-          return await this.request("/orders/my-orders");
+        async getUserOrders(params = { page: 1, limit: 10 }) {
+          let query = `/orders/my-orders?page=${params.page}&limit=${params.limit}`;
+          if (params.startDate) query += `&startDate=${params.startDate}`;
+          if (params.endDate) query += `&endDate=${params.endDate}`;
+          return await this.request(query);
         },
 
-        async submitRating(productId, score, comment) {
+        async submitRating(productId, score, comment, reason) {
+          const body = { productId, score, comment };
+          if (reason) body.reason = reason;
           return await this.request("/ratings", {
             method: "POST",
-            body: JSON.stringify({ productId, score, comment }),
+            body: JSON.stringify(body),
           });
         },
       };
@@ -248,6 +305,10 @@
                       products: [],
                       topProducts: [],
                       orders: [],
+                      
+                      // Receipts Pagination & Filters
+                      receiptFilters: { startDate: '', endDate: '' },
+                      receiptPagination: { page: 1, limit: 10, totalPages: 1 },
 
                       loginForm: { phone: '', password: '' },
                       registerForm: {
@@ -866,6 +927,13 @@
                               }
                             }
                             
+                            // Default filters: last 30 days
+                            const now = new Date();
+                            const lastMonth = new Date();
+                            lastMonth.setDate(now.getDate() - 30);
+                            this.receiptFilters.startDate = lastMonth.toISOString().split('T')[0];
+                            this.receiptFilters.endDate = now.toISOString().split('T')[0];
+
                             this.setupModalUX();
                             this.setupPullRefresh();
                         },
@@ -891,7 +959,8 @@
                                       rating: parseFloat(p.averageRating || 0),
                                       reviews: p.ratingCount || 0,
                                       rewardAmount: parseFloat(p.rewardAmount || 0),
-                                      rateable: p.allowedRating && parseFloat(p.rewardAmount || 0) > 0,
+                                      rewardAmount: parseFloat(p.rewardAmount || 0),
+                                      rateable: true, // All products potentially rateable if purchased
                                       // Assign category for your UI styling
                                       catKey: this.guessCategory(p.name)
                                   }))
@@ -936,11 +1005,19 @@
 
                               // Load orders
                               try {
-                                  const response = await api.getUserOrders();
+                                  const params = {
+                                      page: this.receiptPagination.page,
+                                      limit: this.receiptPagination.limit,
+                                  };
+                                  if (this.receiptFilters.startDate) params.startDate = new Date(this.receiptFilters.startDate).toISOString();
+                                  if (this.receiptFilters.endDate) params.endDate = new Date(this.receiptFilters.endDate).toISOString();
+
+                                  const response = await api.getUserOrders(params);
                                   console.log('Orders API response:', response);
 
                                   const rawOrders = response.data || [];
                                   console.log('Raw orders:', rawOrders);
+                                  this.receiptPagination.totalPages = response.totalPages || 1;
 
                                   this.orders = rawOrders.map(order => {
                                       const rateableProducts = (order.products || []).filter(p => p.rewardInfo ? 1 : p.userRating ? 1 : 0);
@@ -965,7 +1042,7 @@
                                               catKey: this.guessCategory(p.name),
                                               type: p.isPrivateLabel ? 'pl' : 'global',
                                               rewardAmount: p.rewardInfo?.allocatedCredit || p.rewardAmount || 0,
-                                              rateable: p.rateable && ( (p.rewardInfo?.allocatedCredit || p.rewardAmount || 0) > 0 ),
+                                              rateable: p.rateable, // From server (true), allow 0 reward rating
                                               rated: p.hasUserRated,
                                               userRating: p.userRating?.score || 0,
                                               userRatingId: p.userRating?.id || null,
@@ -992,7 +1069,7 @@
                                                    price: product.price,
                                                    type: product.isPrivateLabel ? 'pl' : 'global',
                                                    rewardAmount: product.rewardInfo?.allocatedCredit || product.rewardAmount || 0,
-                                                   rateable: product.rateable && ( (product.rewardInfo?.allocatedCredit || product.rewardAmount || 0) > 0 ),
+                                                   rateable: product.rateable, // From order (true), allow 0 reward rating
                                                    rated: product.hasUserRated,
                                                    userRating: product.userRating?.score || 0,
                                                    userRatingId: product.userRating?.id || null,
@@ -1311,12 +1388,12 @@
                       rateItem(item, stars) {
                           this.selectedRatingItem = item;
                           this.selectedRatingValue = stars;
-                          if (stars < 3) {
+                          if (stars <= 3) {
                               this.feedbackReason = '';
                               this.feedbackComment = '';
                               this.feedbackModalOpen = true;
                           } else {
-                              this.submitRatingToBackend(item, stars, '');
+                              this.submitRatingToBackend(item, stars, '', null);
                           }
                       },
 
@@ -1338,7 +1415,13 @@
                           this.feedbackModalOpen = false;
                           // const comment = `${this.feedbackReason}: ${this.feedbackComment}`;
                           const comment = `${this.feedbackComment}`;
-                          this.submitRatingToBackend(this.selectedRatingItem, this.selectedRatingValue, comment);
+                          
+                          let reasonToSend = this.feedbackReason;
+                          if (['Digər', 'Other', 'Другое'].includes(reasonToSend)) {
+                               reasonToSend = 'Other';
+                          }
+
+                          this.submitRatingToBackend(this.selectedRatingItem, this.selectedRatingValue, comment, reasonToSend);
                       },
 
       //                 async submitRatingToBackend(item, stars, comment) {
@@ -1385,7 +1468,7 @@
       //     }
       // },
 
-      async submitRatingToBackend(item, stars, comment) {
+      async submitRatingToBackend(item, stars, comment, reason) {
           try {
               this.loading = true;
               let response;
@@ -1394,16 +1477,16 @@
               // 1. Determine if this is an Update or a New Rating
               if (item.userRatingId) {
                   // It has an ID, so it MUST be an update
-                  response = await api.updateRating(item.userRatingId, stars, comment);
+                  response = await api.updateRating(item.userRatingId, stars, comment, reason);
                   this.showToast(this.getText('updated'), 'success');
                   console.log("Update logic executed. No reward given.");
               } else {
                   // No ID, so it is a new rating
-                  response = await api.submitRating(item.id, stars, comment);
+                  response = await api.submitRating(item.id, stars, comment, reason);
 
                   // 2. ONLY run reward logic for NEW ratings
                   const data = response.data || response;
-                  const earnedAmount = Number(data.rewardAmount) || 0.01;
+                  const earnedAmount = data.rewardAmount !== undefined ? Number(data.rewardAmount) : 0;
 
                   // Fix the toFixed error by ensuring Numbers
                   const currentBal = Number(this.user.balance) || 0;
@@ -1414,7 +1497,12 @@
 
                   this.animateBalance = true;
                   setTimeout(() => this.animateBalance = false, 500);
-                  this.showToast(`+${earnedAmount.toFixed(2)}₼`, 'success');
+                  
+                  if (earnedAmount > 0) {
+                      this.showToast(`+${earnedAmount.toFixed(2)}₼`, 'success');
+                  } else {
+                      this.showToast(this.getText('feedback_success'), 'success');
+                  }
               }
 
               // 3. Update ALL instances of this product across ALL receipts (Cross-receipt sync)
@@ -1878,7 +1966,8 @@
             <div class="space-y-3">
               <template x-for="product in paginatedProducts" :key="product.id">
                 <div
-                  class="bg-white p-4 rounded-3xl shadow-card border border-gray-50 group"
+                  class="bg-white p-4 rounded-3xl shadow-card border group transition-all duration-300"
+                  :class="(product.rewardAmount > 0 && !product.rated) ? 'border-brand-lime reward-glow-pulse reward-card' : 'border-gray-50'"
                 >
                   <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
@@ -1904,8 +1993,16 @@
                           <template x-if="product.type === 'new'">
                             <span
                               class="text-[9px] bg-brand-lime text-black px-2 py-0.5 rounded font-bold"
-                              >YENİ</span
-                            >
+                            >YENİ</span>
+                            
+                            <template x-if="product.rewardAmount > 0 && !product.rated">
+                                <span 
+                                  class="reward-badge-animate flex items-center space-x-1 ml-2 text-[9px] text-brand-green font-bold bg-green-50 px-2 py-0.5 rounded border border-brand-lime/30 shadow-sm"
+                                >
+                                  <i class="fas fa-gift"></i>
+                                  <span x-text="product.rewardAmount.toFixed(2) + '₼'"></span>
+                                </span>
+                            </template>
                           </template>
                         </div>
                       </div>
@@ -1941,7 +2038,7 @@
                           <i class="fas fa-pencil-alt mr-1"></i> <span x-text="getText('edit')"></span>
                         </button>
                       </template>
-                      <template x-if="!product.rated && !product.isUpdating">
+                      <template x-if="!product.rated && !product.isUpdating && product.rewardAmount > 0">
                         <span
                           class="text-[10px] text-brand-green font-bold bg-green-50 px-2 py-1 rounded"
                           x-text="'+' + (product.rewardAmount).toFixed(2) + '₼'"
@@ -2232,7 +2329,31 @@
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <div class="flex-1 overflow-y-auto px-6 pb-10 space-y-4 pt-4">
+        <div class="px-6 py-4 bg-white/50 border-b border-gray-100">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Tarix Filtrləri</span>
+              <button x-show="receiptFilters.startDate || receiptFilters.endDate" 
+                      @click="receiptFilters.startDate = ''; receiptFilters.endDate = ''; receiptPagination.page = 1; loadUserData()"
+                      class="text-red-500 bg-red-50 px-2 py-1 rounded-lg text-[10px] font-bold transition-colors">
+                <i class="fas fa-undo-alt mr-1"></i> Sıfırla
+              </button>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+              <div class="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-200">
+                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">Kimdən:</span>
+                <input type="date" x-model="receiptFilters.startDate" @change="receiptPagination.page = 1; loadUserData()" 
+                       class="text-sm font-bold outline-none text-gray-700 bg-transparent flex-1">
+              </div>
+              <div class="flex items-center gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-200">
+                <span class="text-xs font-bold text-gray-400 uppercase shrink-0 min-w-[50px]">Kimə:</span>
+                <input type="date" x-model="receiptFilters.endDate" @change="receiptPagination.page = 1; loadUserData()" 
+                       class="text-sm font-bold outline-none text-gray-700 bg-transparent flex-1">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 pb-20 space-y-4 pt-4">
           <template x-for="bill in orders" :key="bill.fullId">
             <div
               @click="openReceipt(bill)"
@@ -2273,6 +2394,30 @@
                   x-text="getText(bill.status)"
                 ></span>
               </div>
+            </div>
+          </template>
+
+          <!-- Pagination -->
+          <div x-show="receiptPagination.totalPages > 1" class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <button @click="if(receiptPagination.page > 1) { receiptPagination.page--; loadUserData(); }" 
+                    :disabled="receiptPagination.page === 1"
+                    class="p-2 px-4 bg-gray-50 text-gray-600 rounded-xl font-bold text-xs disabled:opacity-50">
+              <i class="fas fa-chevron-left mr-1"></i> Geri
+            </button>
+            <span class="text-xs font-bold text-gray-400" x-text="receiptPagination.page + ' / ' + receiptPagination.totalPages"></span>
+            <button @click="if(receiptPagination.page < receiptPagination.totalPages) { receiptPagination.page++; loadUserData(); }" 
+                    :disabled="receiptPagination.page === receiptPagination.totalPages"
+                    class="p-2 px-4 bg-gray-50 text-gray-600 rounded-xl font-bold text-xs disabled:opacity-50">
+              İrəli <i class="fas fa-chevron-right ml-1"></i>
+            </button>
+          </div>
+
+          <template x-if="orders.length === 0">
+            <div class="text-center py-20">
+              <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                <i class="fas fa-receipt text-3xl"></i>
+              </div>
+              <p class="text-gray-400 font-bold" x-text="getText('no_receipts') || 'Qəbz tapılmadı'"></p>
             </div>
           </template>
         </div>
@@ -2484,7 +2629,8 @@
               </div>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto p-4 space-y-3">
+          <div class="flex-1 overflow-y-auto p-4">
+            <div class="space-y-3 overflow-visible">
             <template x-if="selectedReceipt">
               <template
                 x-for="item in (selectedReceipt?.items || []).sort((a, b) => (b.rewardAmount || 0) - (a.rewardAmount || 0))"
@@ -2494,10 +2640,19 @@
                 <div
                   class="relative p-3 rounded-2xl border transition-all duration-300"
                   :class="[
-                                    item.type === 'new' ? 'border-brand-lime bg-gradient-to-r from-white to-green-50 shadow-glow' : 'border-gray-100 bg-white shadow-sm',
+                                    item.rewardAmount > 0 ? 'border-brand-lime reward-glow-pulse reward-card' : 'border-gray-100',
+                                    item.type === 'new' ? 'bg-gradient-to-r from-white to-green-50 shadow-glow' : 'bg-white shadow-sm',
                                     !item.rateable ? 'opacity-60 bg-gray-50' : ''
                                 ]"
                 >
+                  <!-- Floating Reward Badge (only for unrated rewarded items) -->
+                  <template x-if="item.rewardAmount > 0 && !item.rated">
+                    <div class="absolute top-2 right-2 z-20 reward-badge-animate flex items-center space-x-1 bg-brand-lime text-black px-2 py-1 rounded-full shadow-lg border-2 border-white">
+                      <i class="fas fa-gift text-[10px]"></i>
+                      <span class="text-[10px] font-black" x-text="'+' + item.rewardAmount.toFixed(2) + '₼'"></span>
+                    </div>
+                  </template>
+
                   <div class="flex items-center space-x-3 relative z-10">
                     <div
                       class="w-12 h-12 rounded-xl flex items-center justify-center text-sm shrink-0"
@@ -2530,7 +2685,7 @@
                             ></span>
                           </div>
                         </template>
-                      </div>
+                      </div>  
                     </div>
                   </div>
 
@@ -2560,7 +2715,7 @@
                           <i class="fas fa-pencil-alt mr-1"></i> <span x-text="getText('edit')"></span>
                         </button>
                       </template>
-                      <template x-if="!item.rated && !item.isUpdating">
+                      <template x-if="!item.rated && !item.isUpdating && (item.rewardInfo?.allocatedCredit || item.rewardAmount) > 0">
                         <span
                           class="text-[10px] text-brand-green font-bold bg-green-50 px-2 py-1 rounded"
                           x-text="'+' + (item.rewardInfo?.allocatedCredit || item.rewardAmount).toFixed(2) + '₼'"
@@ -2570,7 +2725,8 @@
                   </template>
                 </div>
               </template>
-            </template>
+              </template>
+            </div>
           </div>
         </div>
       </div>
