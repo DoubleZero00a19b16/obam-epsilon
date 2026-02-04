@@ -140,4 +140,24 @@ export class RecommendationsService {
     const saved = await this.recommendationRepo.save(entity);
     return this.toDto(saved);
   }
+
+  async checkExists(productId: string, marketId: string): Promise<{ value: 0 | 1 }> {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const rec = await this.recommendationRepo.findOne({
+      where: {
+        productId: String(productId),
+        marketId: String(marketId),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!rec) {
+      return { value: 1 };
+    }
+
+    const isWithin7Days = rec.createdAt >= sevenDaysAgo;
+    return { value: isWithin7Days ? 0 : 1 };
+  }
 }

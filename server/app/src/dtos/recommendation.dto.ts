@@ -99,3 +99,13 @@ export class GetRecommendationsQueryDto {
   @IsEnum(RecommendationStatus)
   status?: RecommendationStatus;
 }
+
+export class CheckRecommendationQueryDto {
+  @ApiProperty()
+  @IsString()
+  productId: string;
+
+  @ApiProperty()
+  @IsString()
+  marketId: string;
+}

@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AdminGuard } from '@/guards/admin.guard';
 import { RecommendationsService } from '@/services/recommendations.service';
-import { CreateRecommendationDto, GetRecommendationsQueryDto } from '@/dtos/recommendation.dto';
+import { CreateRecommendationDto, GetRecommendationsQueryDto, CheckRecommendationQueryDto } from '@/dtos/recommendation.dto';
 
 @ApiTags('recommendations')
 @Controller('recommendations')
@@ -48,5 +48,11 @@ export class RecommendationsController {
   @ApiOperation({ summary: 'Deny recommendation (Admin)' })
   deny(@Param('id', ParseUUIDPipe) id: string) {
     return this.recommendationsService.deny(id);
+  }
+
+  @Get('check')
+  @ApiOperation({ summary: 'Check if a recommendation exists for productId+marketId and whether it is within 7 days (Admin)' })
+  check(@Query() query: CheckRecommendationQueryDto) {
+    return this.recommendationsService.checkExists(query.productId, query.marketId);
   }
 }
