@@ -21,6 +21,8 @@ import { AiClassificationModule } from './modules/ai-classification.module';
 import { AiClassification } from './entities/ai-classification.entity';
 import { ProductsModule } from './modules/products.module';
 import { MarketsModule } from './modules/markets.module';
+import { RecommendationsModule } from './modules/recommendations.module';
+import { Recommendation } from './entities/recommendation.entity';
 
 @Module({
   imports: [
@@ -55,7 +57,8 @@ import { MarketsModule } from './modules/markets.module';
           RewardTransaction,
           ProductCredit,
           Market,
-          AiClassification
+          AiClassification,
+          Recommendation
         ],
         synchronize: configService.get('DB_SYNCHRONIZE', false), // Set to false in production
         logging: configService.get('DB_LOGGING', false),
@@ -71,7 +74,8 @@ import { MarketsModule } from './modules/markets.module';
     AuthModule,
     AiClassificationModule,
     ProductsModule,
-    MarketsModule
+    MarketsModule,
+    RecommendationsModule
   ],
   controllers: [],
   providers: [],

@@ -107,9 +107,10 @@ export class RatingsService {
 
       if (userCredits.length > 0) {
         // Use the first unclaimed credit (FIFO - First In First Out)
-        creditToUse = userCredits[0];
-        rewardPoints = creditToUse.ratingPoints;
-        rewardAmount = Number(creditToUse.allocatedCredit);
+        const selectedCredit = userCredits[0];
+        creditToUse = selectedCredit;
+        rewardPoints = selectedCredit.ratingPoints;
+        rewardAmount = Number(selectedCredit.allocatedCredit);
       }
 
       // If no credit found, we simply proceed with 0 reward.

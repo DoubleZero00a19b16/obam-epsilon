@@ -43,18 +43,19 @@ export class UsersService {
         password
       });
 
-      console.log('User created:', newUser.id);
+      const savedUser = await this.userRepo.save(newUser);
+      console.log('User created:', savedUser.id);
 
       // Create bonus card for the new user
       const bonusCard = this.bonusCardRepo.create({
-        userId: newUser.id,
+        userId: savedUser.id,
         isActive: true
       });
       await this.bonusCardRepo.save(bonusCard);
       console.log('Bonus card created');
 
       return await this.userRepo.findOne({
-        where: { id: newUser.id },
+        where: { id: savedUser.id },
         relations: ["bonusCard"]
       }) as User;
     } catch (error) {
