@@ -43,7 +43,7 @@ export class RecommendationsService {
     entity.productId = dto.productId;
     entity.marketId = dto.marketId;
     entity.actionType = dto.actionType;
-    entity.actionPayload = dto.actionPayload;
+    entity.actionPayload = dto.actionPayload ?? dto.payload;
     entity.reason = dto.reason;
     entity.confidenceScore = dto.confidenceScore;
     entity.status = RecommendationStatus.ACTIVE;

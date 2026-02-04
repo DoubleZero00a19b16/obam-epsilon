@@ -1,15 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsObject, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsEnum, IsNumber, IsObject, IsOptional, IsString, Max, Min } from 'class-validator';
 import { RecommendationActionType, RecommendationStatus } from '@/entities/recommendation.entity';
 
 export class CreateRecommendationDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @ApiProperty()
+  @IsString()
   productId: string;
 
-  @ApiProperty({ format: 'uuid', description: 'Main market where action applies' })
-  @IsUUID()
+  @ApiProperty({ description: 'Main market where action applies' })
+  @IsString()
   marketId: string;
 
   @ApiProperty({ enum: RecommendationActionType })
@@ -20,6 +20,11 @@ export class CreateRecommendationDto {
   @IsOptional()
   @IsObject()
   actionPayload?: Record<string, any>;
+
+  @ApiPropertyOptional({ type: Object, description: 'Alias for actionPayload' })
+  @IsOptional()
+  @IsObject()
+  payload?: Record<string, any>;
 
   @ApiPropertyOptional()
   @IsOptional()
