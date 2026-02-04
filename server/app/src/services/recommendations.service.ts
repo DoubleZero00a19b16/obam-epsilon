@@ -52,6 +52,23 @@ export class RecommendationsService {
     return this.toDto(saved);
   }
 
+  async createMany(dtos: CreateRecommendationDto[]): Promise<RecommendationResponseDto[]> {
+    const entities = dtos.map((dto) => {
+      const entity = this.recommendationRepo.create();
+      entity.productId = dto.productId;
+      entity.marketId = dto.marketId;
+      entity.actionType = dto.actionType;
+      entity.actionPayload = dto.actionPayload ?? dto.payload;
+      entity.reason = dto.reason;
+      entity.confidenceScore = dto.confidenceScore;
+      entity.status = RecommendationStatus.ACTIVE;
+      return entity;
+    });
+
+    const saved = await this.recommendationRepo.save(entities);
+    return saved.map((s) => this.toDto(s));
+  }
+
   async findAll(query: GetRecommendationsQueryDto): Promise<PaginatedResponseDto<RecommendationResponseDto>> {
     const { page = 1, limit = 10, status } = query;
     const skip = (page - 1) * limit;

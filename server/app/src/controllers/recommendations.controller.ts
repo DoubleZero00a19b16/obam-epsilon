@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseArrayPipe, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/guards/auth.guard';
 import { AdminGuard } from '@/guards/admin.guard';
@@ -16,6 +16,14 @@ export class RecommendationsController {
   @ApiOperation({ summary: 'Create recommendation (Admin)' })
   create(@Body() dto: CreateRecommendationDto) {
     return this.recommendationsService.create(dto);
+  }
+
+  @Post('bulk')
+  @ApiOperation({ summary: 'Create recommendations in bulk (Admin)' })
+  createBulk(
+    @Body(new ParseArrayPipe({ items: CreateRecommendationDto })) dtos: CreateRecommendationDto[],
+  ) {
+    return this.recommendationsService.createMany(dtos);
   }
 
   @Get()
