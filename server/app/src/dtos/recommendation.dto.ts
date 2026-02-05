@@ -41,13 +41,13 @@ export class CreateRecommendationDto {
 }
 
 export class RecommendationResponseDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty()
   productId: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty()
   marketId: string;
 
   @ApiProperty({ enum: RecommendationActionType })
@@ -71,7 +71,7 @@ export class RecommendationResponseDto {
   @ApiPropertyOptional()
   lastEvaluatedAt?: Date;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional()
   approvedBy?: string;
 
   @ApiPropertyOptional()

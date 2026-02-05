@@ -181,6 +181,11 @@
                     class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
               <i class="fas fa-shopping-cart mr-2"></i>New Order
             </button>
+            <button @click="activeTab = 'recommendations'; loadRecommendations()" 
+                    :class="activeTab === 'recommendations' ? 'bg-market-500 text-white' : 'text-market-600 hover:bg-market-100'"
+                    class="py-4 px-6 font-semibold text-sm rounded-t-xl transition-all">
+              <i class="fas fa-lightbulb mr-2"></i>Recommendations
+            </button>
           </nav>
         </div>
       </div>
@@ -553,6 +558,96 @@
         </div>
 
 
+        <!-- RECOMMENDATIONS TAB -->
+        <div x-show="activeTab === 'recommendations' && !loading">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 class="text-2xl font-bold text-market-800">
+              <i class="fas fa-lightbulb text-accent-500 mr-2"></i>Recommendations
+            </h2>
+            <button @click="loadRecommendations()" class="bg-market-100 hover:bg-market-200 text-market-700 px-5 py-2.5 rounded-xl transition font-semibold">
+              <i class="fas fa-rotate mr-2"></i>Refresh
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-market-200">
+            <table class="min-w-full divide-y divide-market-200">
+              <thead class="bg-market-50">
+                <tr>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">ID</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Product</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Market</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Action</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Confidence</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Reason</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Created</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Approved</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-market-700 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-market-100">
+                <template x-for="rec in recommendations" :key="rec.id">
+                  <tr class="hover:bg-market-50 transition">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <span class="text-sm font-mono text-market-700 bg-market-100 px-2 py-1 rounded" x-text="rec.id.substring(0, 8) + '...'"></span>
+                        <button @click="copyToClipboard(rec.id)" class="ml-2 text-market-400 hover:text-market-600 transition">
+                          <i class="fas fa-copy text-xs"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-market-800" x-text="getProductName(rec.productId)"></span>
+                        <span class="text-[10px] font-mono text-market-400" x-text="rec.productId ? rec.productId.substring(0, 8) + '...' : 'N/A'"></span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-market-800" x-text="getMarketName(rec.marketId)"></span>
+                        <span class="text-[10px] font-mono text-market-400" x-text="rec.marketId ? rec.marketId.substring(0, 8) + '...' : 'N/A'"></span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-700 font-bold" x-text="rec.actionType"></td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="rec.status === 'active' ? 'bg-market-100 text-market-700' : rec.status === 'executed' ? 'bg-accent-100 text-accent-700' : 'bg-red-100 text-red-700'" class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full uppercase" x-text="rec.status"></span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-700">
+                      <span x-text="(rec.confidenceScore === 0 || rec.confidenceScore) ? Number(rec.confidenceScore).toFixed(2) : '-' "></span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-market-600 max-w-xs truncate" x-text="rec.reason || '-'" ></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600" x-text="formatDate(rec.createdAt)"></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-market-600" x-text="rec.approvedAt ? formatDate(rec.approvedAt) : '-'" ></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button x-show="!rec.approvedAt && rec.status === 'active'" @click="approveRecommendation(rec.id)" class="text-white bg-market-600 hover:bg-market-700 px-3 py-2 rounded-lg transition">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button x-show="!rec.approvedAt && rec.status === 'active'" @click="denyRecommendation(rec.id)" class="text-white bg-red-600 hover:bg-red-700 px-3 py-2 rounded-lg transition">
+                        <i class="fas fa-times"></i>
+                      </button>
+                      <span x-show="rec.approvedAt || rec.status !== 'active'" class="text-xs text-market-400">-</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-between items-center mt-4 px-2">
+            <p class="text-sm text-market-600">Page <span x-text="currentPage.recommendations"></span> of <span x-text="totalPages('recommendations')"></span></p>
+            <div class="flex space-x-2">
+              <button @click="goToPage('recommendations', currentPage.recommendations - 1)" :disabled="currentPage.recommendations === 1" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                <i class="fas fa-chevron-left"></i> Prev
+              </button>
+              <span class="px-4 py-2 bg-market-500 text-white rounded-lg font-bold" x-text="currentPage.recommendations + ' / ' + totalPages('recommendations')"></span>
+              <button @click="goToPage('recommendations', currentPage.recommendations + 1)" :disabled="currentPage.recommendations >= totalPages('recommendations')" class="px-4 py-2 bg-market-100 text-market-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-market-200 transition">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+
         <!-- NEW ORDER TAB -->
         <div x-show="activeTab === 'orders' && !loading" class="bg-white rounded-3xl shadow-lg border border-market-100 overflow-hidden">
           <div class="bg-market-700 px-8 py-5 flex justify-between items-center">
@@ -898,7 +993,7 @@
         searchQuery: '',
         
         stats: { totalUsers: 0, totalProducts: 0, totalRatings: 0, totalMarkets: 0 },
-        users: [], products: [], markets: [], ratings: [], orders: [],
+        users: [], products: [], markets: [], ratings: [], orders: [], recommendations: [],
         filteredUsers: [], filteredProducts: [], filteredRatings: [],
         showUserModal: false, showProductModal: false, showMarketModal: false, showOrderModal: false,
         userForm: {}, productForm: {}, marketForm: {}, orderForm: { bonusCardNumber: '', marketId: '', items: [] },
@@ -910,7 +1005,7 @@
         toast: { show: false, message: '', type: 'success' },
         
         // Pagination
-        currentPage: { users: 1, products: 1, ratings: 1, orders: 1 },
+        currentPage: { users: 1, products: 1, ratings: 1, orders: 1, recommendations: 1 },
         itemsPerPage: 10,
 
         init() {
@@ -929,7 +1024,7 @@
 
         async loadAllData() {
           this.loading = true;
-          await Promise.all([this.loadUsers(), this.loadProducts(), this.loadMarkets(), this.loadRatings(), this.loadOrders()]);
+          await Promise.all([this.loadUsers(), this.loadProducts(), this.loadMarkets(), this.loadRatings(), this.loadOrders(), this.loadRecommendations()]);
           this.updateStats();
           this.loading = false;
         },
@@ -995,13 +1090,53 @@
           } catch (e) { console.error('Load Orders Failed:', e); this.orders = []; } 
         },
 
-        copyToClipboard(text) {
-          navigator.clipboard.writeText(text).then(() => {
+        async loadRecommendations() {
+          try {
+            const page = this.currentPage.recommendations;
+            let query = `/recommendations?page=${page}&limit=${this.itemsPerPage}`;
+            const res = await this.request(query);
+            this.recommendations = res.data || (Array.isArray(res) ? res : []);
+            this.serverTotalPages = this.serverTotalPages || {};
+            this.serverTotalPages.recommendations = res.totalPages || 1;
+          } catch (e) {
+            console.error('Load Recommendations Failed:', e);
+            this.recommendations = [];
+          }
+        },
+
+        async copyToClipboard(text) {
+          try {
+            const value = String(text ?? '');
+
+            if (navigator.clipboard && window.isSecureContext) {
+              await navigator.clipboard.writeText(value);
+              this.showToast('Copied to clipboard!');
+              return;
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '0';
+            textarea.style.left = '0';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            document.body.appendChild(textarea);
+
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+
+            const ok = document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            if (!ok) throw new Error('execCommand(copy) failed');
             this.showToast('Copied to clipboard!');
-          }).catch(err => {
+          } catch (err) {
             console.error('Failed to copy: ', err);
             this.showToast('Failed to copy', 'error');
-          });
+          }
         },
 
         showToast(message, type = 'success') {
@@ -1026,6 +1161,7 @@
         },
         totalPages(type) {
           if (type === 'orders') return this.serverTotalPages?.orders || 1;
+          if (type === 'recommendations') return this.serverTotalPages?.recommendations || 1;
           const data = type === 'users' ? this.filteredUsers : type === 'products' ? this.filteredProducts : type === 'ratings' ? this.filteredRatings : this.markets;
           return Math.ceil(data.length / this.itemsPerPage) || 1;
         },
@@ -1033,6 +1169,27 @@
           if (page >= 1 && page <= this.totalPages(type)) {
             this.currentPage[type] = page;
             if (type === 'orders') this.loadOrders();
+            if (type === 'recommendations') this.loadRecommendations();
+          }
+        },
+
+        async approveRecommendation(id) {
+          try {
+            await this.request(`/recommendations/${id}/approve`, { method: 'POST' });
+            await this.loadRecommendations();
+            this.showToast('Recommendation approved');
+          } catch (e) {
+            alert('Error: ' + e.message);
+          }
+        },
+
+        async denyRecommendation(id) {
+          try {
+            await this.request(`/recommendations/${id}/deny`, { method: 'POST' });
+            await this.loadRecommendations();
+            this.showToast('Recommendation denied');
+          } catch (e) {
+            alert('Error: ' + e.message);
           }
         },
 

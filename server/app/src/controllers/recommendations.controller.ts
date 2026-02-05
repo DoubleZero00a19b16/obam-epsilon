@@ -32,6 +32,12 @@ export class RecommendationsController {
     return this.recommendationsService.findAll(query);
   }
 
+  @Get('check')
+  @ApiOperation({ summary: 'Check if a recommendation exists for productId+marketId and whether it is within 7 days (Admin)' })
+  check(@Query() query: CheckRecommendationQueryDto) {
+    return this.recommendationsService.checkExists(query.productId, query.marketId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get recommendation by id (Admin)' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -48,11 +54,5 @@ export class RecommendationsController {
   @ApiOperation({ summary: 'Deny recommendation (Admin)' })
   deny(@Param('id', ParseUUIDPipe) id: string) {
     return this.recommendationsService.deny(id);
-  }
-
-  @Get('check')
-  @ApiOperation({ summary: 'Check if a recommendation exists for productId+marketId and whether it is within 7 days (Admin)' })
-  check(@Query() query: CheckRecommendationQueryDto) {
-    return this.recommendationsService.checkExists(query.productId, query.marketId);
   }
 }
